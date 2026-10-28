@@ -74,6 +74,7 @@ export class ReproductionReviewService {
     if (this.deps.fingerprintSource() !== run.targetSnapshot.sourceFingerprint || digest(fs.readFileSync(frozenTestPath)) !== attempt.compiledTestHash) {
       return this.finishFailure(run, "BLOCKED", "Accepted inputs changed during baseline confirmation", completedAt);
     }
+    run.baselineArtifacts = { ...execution.artifactPaths };
     run.baselineRun = toTestRun(execution, completedAt);
     if (execution.outcome !== "ASSERTION_FAILED") {
       return this.finishFailure(run, execution.outcome === "PASSED" ? "BASELINE_PASSED" : "CANDIDATE_EXECUTION_ERROR",
@@ -109,4 +110,5 @@ function writeImmutable(file: string, content: Buffer): void {
   const temporary = `${file}.${process.pid}.tmp`; fs.writeFileSync(temporary, content, { flag: "wx" }); fs.renameSync(temporary, file);
 }
 function toTestRun(result: RunResult, runAt: string): TestRun { return { outcome: result.outcome, testFingerprint: result.testFingerprint, testIds: result.testIds,
-  runId: result.runId, reportHash: result.reportHash, runAt, passed: result.passed, expected: result.expected, actual: result.actual, durationMs: result.durationMs, evidenceIds: [] }; }
+  runId: result.runId, reportHash: result.reportHash, runAt, passed: result.passed, expected: result.expected, actual: result.actual, durationMs: result.durationMs,
+  evidenceIds: Object.keys(result.artifactPaths).map(key => `ev-${result.runId}-${key}`) }; }

@@ -31,6 +31,12 @@ beforeEach(() => { vi.clearAllMocks(); mocks.listReproductionRuns.mockResolvedVa
 afterEach(() => vi.useRealTimers());
 
 describe("CaseDetail arbitrary reproduction lifecycle", () => {
+  it("allows reviewing a replacement candidate even when a reproduction was already configured", async () => {
+    mocks.listReproductionRuns.mockResolvedValue([run("AWAITING_TEST_REVIEW", "replacement-candidate")]);
+    render(<CaseDetail bugCase={completeCase({ reproduction: { preconditions: [], steps: [], expected: "20", actual: "10", testFile: "old.spec.ts", lastRun: null } })} onUpdate={vi.fn()} />);
+    expect(await screen.findByText("replacement-candidate")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /regenerate reproduction/i })).toBeInTheDocument();
+  });
   it("shows structured report fields instead of empty legacy reproduction placeholders", () => {
     render(<CaseDetail bugCase={completeCase({
       reproduction: { preconditions: [], steps: ["Legacy placeholder"], expected: "", actual: "", testFile: "", lastRun: null },
@@ -56,7 +62,7 @@ describe("CaseDetail arbitrary reproduction lifecycle", () => {
   it("retains the configured-test reproduction workflow", () => {
     render(<CaseDetail bugCase={completeCase({ reproduction: { preconditions: [], steps: [], expected: "", actual: "", testFile: "tests/playwright/case.spec.ts", lastRun: null } })} onUpdate={vi.fn()} />);
     expect(screen.getByRole("button", { name: /mark as ready to reproduce/i })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /generate reproduction/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /regenerate reproduction/i })).toBeEnabled();
   });
 
   it("explains that a passing configured baseline is not an AI repair", () => {

@@ -1,4 +1,4 @@
-# Bug-to-Proof portfolio release notes
+# Proofline portfolio release notes
 
 ## Resume bullet
 
@@ -6,7 +6,7 @@ Built an evidence-backed TypeScript/React bug-reproduction pipeline that turns s
 
 ## LinkedIn draft
 
-I built Bug-to-Proof to explore a harder question than “can an AI write a patch?”: can it produce evidence you can audit?
+I built Proofline to explore a harder question than “can an AI write a patch?”: can it produce evidence you can audit?
 
 For a configured local React application, the workflow now starts from a structured bug report, discovers trusted UI targets, generates a constrained Playwright candidate, pauses for hash-bound human review, freezes the accepted test, and requires a real assertion failure on unchanged source. A repair is only verified when the identical test passes afterward, required regressions pass, and a manifest-backed proof bundle independently checks out.
 

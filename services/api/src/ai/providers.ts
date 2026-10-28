@@ -2,7 +2,7 @@ import { Embeddings, EmbeddingsInterface } from "@langchain/core/embeddings";
 import { OpenAIEmbeddings, ChatOpenAI } from "@langchain/openai";
 import { OllamaEmbeddings, ChatOllama } from "@langchain/ollama";
 import { digest } from "../runner/integrity";
-import { callLLM } from "../llm/client";
+import { callLLM, callLLMWithDiagnostics, type LLMCallResult } from "../llm/client";
 
 export type EmbeddingProvider = "lexical" | "openai" | "ollama";
 export type GenerationProvider = "disabled" | "legacy" | "openai" | "ollama";
@@ -18,6 +18,10 @@ export interface RagConfig {
   topK: number;
   minScore: number;
   timeoutMs: number;
+  generationContextTokens?: number;
+  generationMaxOutputTokens?: number;
+  generationJsonMode?: boolean;
+  generationStructuredOutputs?: boolean;
 }
 function numberSetting(name: string, fallback: number, min: number, max: number, integer = true) {
   const value = Number(process.env[name] ?? fallback);
@@ -43,7 +47,11 @@ export function ragConfig(): RagConfig {
     generationBaseUrl: process.env.RAG_GENERATION_BASE_URL?.trim() || (generationProvider === "ollama" ? "http://localhost:11434" : process.env.LLM_API_URL ?? "https://api.openai.com/v1"),
     chunkSize, chunkOverlap, topK: numberSetting("RAG_TOP_K", 4, 1, 8),
     minScore: numberSetting("RAG_MIN_SCORE", embeddingProvider === "lexical" ? 0.08 : 0.3, 0, 1, false),
-    timeoutMs: numberSetting("RAG_TIMEOUT_MS", 20000, 1000, 60000),
+    timeoutMs: numberSetting("RAG_TIMEOUT_MS", 20000, 1000, 600000),
+    generationContextTokens: numberSetting("RAG_GENERATION_CONTEXT_TOKENS", 16384, 2048, 131072),
+    generationMaxOutputTokens: numberSetting("RAG_GENERATION_MAX_OUTPUT_TOKENS", 2048, 128, 16384),
+    generationJsonMode: process.env.RAG_GENERATION_JSON_MODE === "true",
+    generationStructuredOutputs: process.env.RAG_GENERATION_STRUCTURED_OUTPUTS === "true",
   };
 }
 export const tokens = (text: string) => text.replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase().match(/[a-z0-9]+/g) ?? [];
@@ -103,6 +111,9 @@ export async function generateAnswer(
       model: config.generationModel,
       temperature: 0,
       maxRetries: 0,
+      numCtx: config.generationContextTokens,
+      numPredict: config.generationMaxOutputTokens,
+      ...(config.generationJsonMode ? { format: "json" } : {}),
     });
     const response = await model.invoke(prompt, { signal: combinedSignal });
     return typeof response.content === "string" ? response.content : "";
@@ -119,4 +130,16 @@ export async function generateAnswer(
   });
   const response = await model.invoke(prompt, { signal: combinedSignal });
   return typeof response.content === "string" ? response.content : "";
+}
+
+/** Shared transport for patch proposals, retaining measurements for run provenance. */
+export async function generateWithDiagnostics(prompt: string, config: RagConfig, abortSignal?: AbortSignal, schema?: Record<string, unknown>): Promise<LLMCallResult> {
+  if (config.generationProvider === "disabled") return { content: "", responseShape: "request_not_sent:disabled" };
+  if (config.generationProvider === "legacy") return callLLMWithDiagnostics(prompt, config.timeoutMs, abortSignal, config.generationMaxOutputTokens);
+  return callLLMWithDiagnostics(prompt, config.timeoutMs, abortSignal, config.generationMaxOutputTokens, {
+    apiUrl: config.generationBaseUrl, model: config.generationModel, protocol: config.generationProvider,
+    apiKey: config.generationProvider === "openai" ? process.env.RAG_GENERATION_API_KEY || process.env.LLM_API_KEY || process.env.OPENAI_API_KEY : undefined,
+    contextTokens: config.generationContextTokens, jsonMode: config.generationJsonMode,
+    ...(config.generationStructuredOutputs && schema ? { schema } : {}),
+  });
 }

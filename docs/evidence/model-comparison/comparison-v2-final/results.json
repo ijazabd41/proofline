@@ -1,0 +1,724 @@
+{
+  "summary": {
+    "manifestHash": "950d7b2d70e8be66caac9a8b1a63c2f86e65a723bc8d5e8532925b0ff9dc485a",
+    "purpose": "Paired controlled MiniShop model comparison; not held-out generalization",
+    "profiles": [
+      {
+        "id": "local",
+        "provider": "ollama",
+        "model": "qwen2.5-coder:3b",
+        "endpoint": "http://127.0.0.1:11435",
+        "digest": "f72c60cabf6237b07f6e632b2c48d533cef25eda2efbd34bed21c5e9c01e6225"
+      },
+      {
+        "id": "hosted",
+        "provider": "openai",
+        "model": "openai/gpt-oss-20b",
+        "endpoint": "https://api.groq.com/openai/v1"
+      }
+    ],
+    "hardware": {
+      "cpu": "Intel(R) Core(TM) i7-8565U CPU @ 1.80GHz",
+      "logicalCpus": 8,
+      "memoryBytes": 16907538432,
+      "platform": "win32 x64",
+      "node": "v24.15.0"
+    },
+    "policy": {
+      "timeoutMs": 600000,
+      "contextTokens": 16384,
+      "maxOutputTokens": 2048,
+      "candidateAttempts": 1,
+      "transportAttempts": 3,
+      "jsonMode": true,
+      "structuredOutputs": true,
+      "regressionTimeoutMs": 120000,
+      "order": "fixture order; alternate local/hosted first by index; reproduction then independent repair"
+    },
+    "executionOrder": [
+      "local--cmp-usb-price--reproduction",
+      "hosted--cmp-usb-price--reproduction",
+      "local--cmp-usb-price--repair",
+      "hosted--cmp-usb-price--repair",
+      "hosted--cmp-webcam-quantity--reproduction",
+      "local--cmp-webcam-quantity--reproduction",
+      "hosted--cmp-webcam-quantity--repair",
+      "local--cmp-webcam-quantity--repair",
+      "local--cmp-webcam-name--reproduction",
+      "hosted--cmp-webcam-name--reproduction",
+      "local--cmp-webcam-name--repair",
+      "hosted--cmp-webcam-name--repair",
+      "hosted--cmp-control-usb-name--reproduction",
+      "local--cmp-control-usb-name--reproduction",
+      "local--cmp-control-webcam-price--reproduction",
+      "hosted--cmp-control-webcam-price--reproduction"
+    ],
+    "complete": true,
+    "expectedCells": 16,
+    "observedCells": 16,
+    "models": [
+      {
+        "model": "local",
+        "cells": 8,
+        "completed": 8,
+        "errors": 0,
+        "reproduction": {
+          "denominator": 3,
+          "valid": 0,
+          "executable": 0,
+          "reportMatched": 0
+        },
+        "controls": {
+          "denominator": 2,
+          "falsePositives": 0
+        },
+        "repair": {
+          "denominator": 3,
+          "verified": 0,
+          "sameTest": 0
+        },
+        "infrastructureFailures": 0,
+        "inputTokens": 22306,
+        "outputTokens": 2230,
+        "unknownUsageCells": 0,
+        "modelRequests": 8,
+        "unknownRequestCountCells": 0,
+        "generationLatencyP95Ms": 439591,
+        "measuredLatencyCells": 8,
+        "costUsd": null,
+        "stageLatency": {
+          "reproduction": {
+            "samples": 5,
+            "p95Ms": 195089
+          },
+          "repair": {
+            "samples": 3,
+            "p95Ms": 439591
+          }
+        }
+      },
+      {
+        "model": "hosted",
+        "cells": 8,
+        "completed": 8,
+        "errors": 0,
+        "reproduction": {
+          "denominator": 3,
+          "valid": 2,
+          "executable": 2,
+          "reportMatched": 2
+        },
+        "controls": {
+          "denominator": 2,
+          "falsePositives": 0
+        },
+        "repair": {
+          "denominator": 3,
+          "verified": 2,
+          "sameTest": 2
+        },
+        "infrastructureFailures": 4,
+        "inputTokens": 16180,
+        "outputTokens": 4062,
+        "unknownUsageCells": 4,
+        "modelRequests": 16,
+        "unknownRequestCountCells": 0,
+        "generationLatencyP95Ms": 2780,
+        "measuredLatencyCells": 8,
+        "costUsd": null,
+        "stageLatency": {
+          "reproduction": {
+            "samples": 5,
+            "p95Ms": 2780
+          },
+          "repair": {
+            "samples": 3,
+            "p95Ms": 1769
+          }
+        }
+      }
+    ],
+    "localMinusHosted": {
+      "reproductionPercentagePoints": -66.66666666666666,
+      "repairPercentagePoints": -66.66666666666666
+    },
+    "limitations": [
+      "Small controlled comparison, not a fresh held-out generalization claim.",
+      "Report matching uses a conservative scripted rubric, not human acceptance.",
+      "Repair approval is scripted for the benchmark; proposals and execution are live.",
+      "Token counts are provider-specific; cost and local energy consumption are unknown.",
+      "Cold model load timing is retained when supplied; wall latency includes runtime differences."
+    ]
+  },
+  "manifest": {
+    "schemaVersion": "1.0",
+    "id": "comparison-v2-final",
+    "createdAt": "2026-10-23T12:38:56.763Z",
+    "purpose": "Paired controlled MiniShop model comparison; not held-out generalization",
+    "sourceFingerprint": "5f05334359364ab89e747dda08ea11c2c1671254a426b86011946a24318cd9c4",
+    "referenceTestHash": "27cc082ad0bac572549974920fec1b5a4a43690ba8722726df4a4d2fe32a227b",
+    "fixturesHash": "c2d8f620ff478ffd28d57d6eb87f51a336bcf34a43db4e89b522486db87e6450",
+    "referencesHash": "858892fdf32c424eed6c4cc11941a2e013575d8d594fc7d17bbb36cbfb1784ab",
+    "promptHash": "797018a529a627af9dedda742f505125a940cf8d2a5354daba6e4d786eceae78",
+    "compilerVersion": "1.4.0",
+    "models": [
+      {
+        "id": "local",
+        "provider": "ollama",
+        "model": "qwen2.5-coder:3b",
+        "endpoint": "http://127.0.0.1:11435",
+        "digest": "f72c60cabf6237b07f6e632b2c48d533cef25eda2efbd34bed21c5e9c01e6225"
+      },
+      {
+        "id": "hosted",
+        "provider": "openai",
+        "model": "openai/gpt-oss-20b",
+        "endpoint": "https://api.groq.com/openai/v1"
+      }
+    ],
+    "fixtures": [
+      {
+        "id": "cmp-usb-price",
+        "label": "bug",
+        "expectedTarget": "product-price-3",
+        "expectedValue": 15,
+        "report": {
+          "title": "USB Hub catalog price is two dollars too high",
+          "description": "The USB Hub catalog price should be $15.00. Its catalog card displays $17.00.",
+          "steps": [
+            "Open the shop",
+            "Read the USB Hub price without adding anything"
+          ],
+          "expected": "The USB Hub catalog price should be $15.00.",
+          "actual": "Its catalog card displays $17.00.",
+          "startPath": "/",
+          "context": "Fresh page and empty cart; no other changes."
+        },
+        "defects": [
+          {
+            "relativePath": "src/components/ProductCard.tsx",
+            "fixedContent": "${product.price.toFixed(2)}",
+            "buggyContent": "${(product.price + (product.id === 3 ? 2 : 0)).toFixed(2)}"
+          }
+        ]
+      },
+      {
+        "id": "cmp-webcam-quantity",
+        "label": "bug",
+        "expectedTarget": "cart-item-quantity-4",
+        "expectedValue": "×1",
+        "report": {
+          "title": "Adding Webcam once creates three units",
+          "description": "The Webcam quantity should be ×1. The Webcam quantity shows ×3 after one click.",
+          "steps": [
+            "Open the shop",
+            "Click Webcam Add to Cart once",
+            "Read the Webcam cart quantity"
+          ],
+          "expected": "The Webcam quantity should be ×1.",
+          "actual": "The Webcam quantity shows ×3 after one click.",
+          "startPath": "/",
+          "context": "Fresh page and empty cart; no other changes."
+        },
+        "defects": [
+          {
+            "relativePath": "src/components/ProductCard.tsx",
+            "fixedContent": "onClick={() => addItem(product)}",
+            "buggyContent": "onClick={() => { addItem(product); if (product.id === 4) { addItem(product); addItem(product); } }}"
+          }
+        ]
+      },
+      {
+        "id": "cmp-webcam-name",
+        "label": "bug",
+        "expectedTarget": "cart-item-name-4",
+        "expectedValue": "Webcam",
+        "report": {
+          "title": "Webcam cart line is incorrectly named USB Hub",
+          "description": "The cart line name should be Webcam. The cart line is named USB Hub.",
+          "steps": [
+            "Open the shop",
+            "Add one Webcam",
+            "Read the item name in the cart sidebar"
+          ],
+          "expected": "The cart line name should be Webcam.",
+          "actual": "The cart line is named USB Hub.",
+          "startPath": "/",
+          "context": "Fresh page and empty cart; no other changes."
+        },
+        "defects": [
+          {
+            "relativePath": "src/components/CartItem.tsx",
+            "fixedContent": "{item.name}</span>",
+            "buggyContent": "{item.id === 4 ? \"USB Hub\" : item.name}</span>"
+          }
+        ]
+      },
+      {
+        "id": "cmp-control-usb-name",
+        "label": "control",
+        "expectedTarget": "product-name-3",
+        "expectedValue": "USB Hub",
+        "defects": [],
+        "report": {
+          "title": "Check the USB Hub catalog label",
+          "description": "The catalog name should be USB Hub. The catalog name is USB Hub; no defect is observed.",
+          "steps": [
+            "Open the shop",
+            "Read the USB Hub product name"
+          ],
+          "expected": "The catalog name should be USB Hub.",
+          "actual": "The catalog name is USB Hub; no defect is observed.",
+          "startPath": "/",
+          "context": "Fresh page and empty cart; no other changes."
+        }
+      },
+      {
+        "id": "cmp-control-webcam-price",
+        "label": "control",
+        "expectedTarget": "product-price-4",
+        "expectedValue": 35,
+        "defects": [],
+        "report": {
+          "title": "Check the Webcam catalog price",
+          "description": "The Webcam catalog price should be $35.00. The catalog price is $35.00; no defect is observed.",
+          "steps": [
+            "Open the shop",
+            "Read the Webcam product price"
+          ],
+          "expected": "The Webcam catalog price should be $35.00.",
+          "actual": "The catalog price is $35.00; no defect is observed.",
+          "startPath": "/",
+          "context": "Fresh page and empty cart; no other changes."
+        }
+      }
+    ],
+    "pipelineHash": "1082f14f3137f8082c7b3458f6d8db729ff13df1bd7effc8bc89faa9542a4832",
+    "hardware": {
+      "cpu": "Intel(R) Core(TM) i7-8565U CPU @ 1.80GHz",
+      "logicalCpus": 8,
+      "memoryBytes": 16907538432,
+      "platform": "win32 x64",
+      "node": "v24.15.0"
+    },
+    "policy": {
+      "timeoutMs": 600000,
+      "contextTokens": 16384,
+      "maxOutputTokens": 2048,
+      "candidateAttempts": 1,
+      "transportAttempts": 3,
+      "jsonMode": true,
+      "structuredOutputs": true,
+      "regressionTimeoutMs": 120000,
+      "order": "fixture order; alternate local/hosted first by index; reproduction then independent repair"
+    },
+    "manifestHash": "950d7b2d70e8be66caac9a8b1a63c2f86e65a723bc8d5e8532925b0ff9dc485a"
+  },
+  "cells": [
+    {
+      "id": "hosted--cmp-control-usb-name--reproduction",
+      "model": "hosted",
+      "caseId": "cmp-control-usb-name",
+      "stage": "reproduction",
+      "label": "control",
+      "status": "COMPLETE",
+      "startedAt": "2026-10-23T13:10:00.424Z",
+      "modelRequests": 3,
+      "generationMs": 826,
+      "runId": "3b862fd2-a56f-41ef-9eaf-38a253c85821",
+      "outcome": "BLOCKED",
+      "validCandidate": false,
+      "executable": false,
+      "assertionFailed": false,
+      "falsePositive": false,
+      "failureCode": "request_failed",
+      "infrastructureFailure": true,
+      "completedAt": "2026-10-23T13:10:05.698Z",
+      "durationMs": 5273,
+      "recordHash": "e1b6fa0537cc3a52496467cc5a2116a8006984a66e85b86d60900818c18d794b"
+    },
+    {
+      "id": "hosted--cmp-control-webcam-price--reproduction",
+      "model": "hosted",
+      "caseId": "cmp-control-webcam-price",
+      "stage": "reproduction",
+      "label": "control",
+      "status": "COMPLETE",
+      "startedAt": "2026-10-23T13:13:53.644Z",
+      "modelRequests": 3,
+      "generationMs": 788,
+      "runId": "fee2e101-9230-47bf-b026-1d30a08666d5",
+      "outcome": "BLOCKED",
+      "validCandidate": false,
+      "executable": false,
+      "assertionFailed": false,
+      "falsePositive": false,
+      "failureCode": "request_failed",
+      "infrastructureFailure": true,
+      "completedAt": "2026-10-23T13:13:59.256Z",
+      "durationMs": 5611,
+      "recordHash": "5060d5f19512839e2ebd1784a3b14149068e246a36825e11585fbf9ba19bcd9f"
+    },
+    {
+      "id": "hosted--cmp-usb-price--repair",
+      "model": "hosted",
+      "caseId": "cmp-usb-price",
+      "stage": "repair",
+      "label": "bug",
+      "status": "COMPLETE",
+      "startedAt": "2026-10-23T12:49:09.195Z",
+      "inputTokens": 4199,
+      "outputTokens": 597,
+      "modelRequests": 1,
+      "generationMs": 1769,
+      "runId": "run-756a1906-8749-4100-abe8-f2d7ad58fd94",
+      "outcome": "VERIFIED",
+      "infrastructureFailure": false,
+      "sameTest": true,
+      "verified": true,
+      "proofPayloads": 26,
+      "proofZipHash": "211c667b02ad4ab25725dc05bab73baa366dbe4c7aecce9fb13e40a22fbd3ec9",
+      "completedAt": "2026-10-23T12:50:03.386Z",
+      "durationMs": 54191,
+      "recordHash": "a4deb6033c21972c41fa25f9309786dc0303b523c806708586a2ff6149740056"
+    },
+    {
+      "id": "hosted--cmp-usb-price--reproduction",
+      "model": "hosted",
+      "caseId": "cmp-usb-price",
+      "stage": "reproduction",
+      "label": "bug",
+      "status": "COMPLETE",
+      "startedAt": "2026-10-23T12:42:31.448Z",
+      "inputTokens": 3894,
+      "outputTokens": 1007,
+      "modelRequests": 1,
+      "generationMs": 2232,
+      "runId": "388c0cb9-ebc4-4a21-91eb-3389589d98c4",
+      "outcome": "AWAITING_TEST_REVIEW",
+      "validCandidate": true,
+      "executable": true,
+      "assertionFailed": true,
+      "falsePositive": false,
+      "infrastructureFailure": false,
+      "fixedPassed": true,
+      "sameTest": true,
+      "reportMatched": true,
+      "completedAt": "2026-10-23T12:42:54.381Z",
+      "durationMs": 22932,
+      "recordHash": "2127d816f460c606670d08a5dc361cf27d40eee402b7a804789d3a4dd0d4fcfe"
+    },
+    {
+      "id": "hosted--cmp-webcam-name--repair",
+      "model": "hosted",
+      "caseId": "cmp-webcam-name",
+      "stage": "repair",
+      "label": "bug",
+      "status": "COMPLETE",
+      "startedAt": "2026-10-23T13:09:47.938Z",
+      "modelRequests": 3,
+      "generationMs": 739,
+      "runId": "run-1d1eb085-6ef8-49be-8528-e6946bb9cc11",
+      "outcome": "BLOCKED",
+      "failureCode": "request_failed",
+      "infrastructureFailure": true,
+      "completedAt": "2026-10-23T13:10:00.256Z",
+      "durationMs": 12317,
+      "recordHash": "87b99ee607bec0afe5a6e587a9a3e1f499deb4286cc425fcde0cfdbe44bbc7c8"
+    },
+    {
+      "id": "hosted--cmp-webcam-name--reproduction",
+      "model": "hosted",
+      "caseId": "cmp-webcam-name",
+      "stage": "reproduction",
+      "label": "bug",
+      "status": "COMPLETE",
+      "startedAt": "2026-10-23T13:04:43.430Z",
+      "modelRequests": 3,
+      "generationMs": 773,
+      "runId": "efde096c-83d9-4d3f-814f-b460f7b90e76",
+      "outcome": "BLOCKED",
+      "validCandidate": false,
+      "executable": false,
+      "assertionFailed": false,
+      "falsePositive": false,
+      "failureCode": "request_failed",
+      "infrastructureFailure": true,
+      "completedAt": "2026-10-23T13:04:48.257Z",
+      "durationMs": 4826,
+      "recordHash": "97db4515a2df1d5378f7930d5ba40e58edf445da094b4b5a0980f6c74382a608"
+    },
+    {
+      "id": "hosted--cmp-webcam-quantity--repair",
+      "model": "hosted",
+      "caseId": "cmp-webcam-quantity",
+      "stage": "repair",
+      "label": "bug",
+      "status": "COMPLETE",
+      "startedAt": "2026-10-23T12:53:44.767Z",
+      "inputTokens": 4198,
+      "outputTokens": 820,
+      "modelRequests": 1,
+      "generationMs": 1679,
+      "runId": "run-2c8b673e-b3b9-43a7-8b5a-f5aafdd71a97",
+      "outcome": "VERIFIED",
+      "infrastructureFailure": false,
+      "sameTest": true,
+      "verified": true,
+      "proofPayloads": 26,
+      "proofZipHash": "3e6533cb5d9d81065154593a086a341deb4cf8e3d8c25b36d682f7529f092925",
+      "completedAt": "2026-10-23T12:54:55.009Z",
+      "durationMs": 70239,
+      "recordHash": "2da3824f0eba5b5d8d5060589a57fe821d9fbd9a65853aef4993d8f420406ac3"
+    },
+    {
+      "id": "hosted--cmp-webcam-quantity--reproduction",
+      "model": "hosted",
+      "caseId": "cmp-webcam-quantity",
+      "stage": "reproduction",
+      "label": "bug",
+      "status": "COMPLETE",
+      "startedAt": "2026-10-23T12:50:03.571Z",
+      "inputTokens": 3889,
+      "outputTokens": 1638,
+      "modelRequests": 1,
+      "generationMs": 2780,
+      "runId": "c2634cb1-1262-4057-ba00-dc4409e0b279",
+      "outcome": "AWAITING_TEST_REVIEW",
+      "validCandidate": true,
+      "executable": true,
+      "assertionFailed": true,
+      "falsePositive": false,
+      "infrastructureFailure": false,
+      "fixedPassed": true,
+      "sameTest": true,
+      "reportMatched": true,
+      "completedAt": "2026-10-23T12:50:25.052Z",
+      "durationMs": 21481,
+      "recordHash": "455040400734dd47111bb619c8cac4a2ea1925ca06b57df69d668632636dc6d9"
+    },
+    {
+      "id": "local--cmp-control-usb-name--reproduction",
+      "model": "local",
+      "caseId": "cmp-control-usb-name",
+      "stage": "reproduction",
+      "label": "control",
+      "status": "COMPLETE",
+      "startedAt": "2026-10-23T13:10:06.041Z",
+      "inputTokens": 2069,
+      "outputTokens": 225,
+      "modelRequests": 1,
+      "providerTimings": {
+        "totalMs": 104360.3856,
+        "loadMs": 13.6218,
+        "promptEvalMs": 60131.302,
+        "evalMs": 44042.143
+      },
+      "generationMs": 104372,
+      "runId": "ed6c995c-3097-45d8-ad8c-14e710205739",
+      "outcome": "CANDIDATE_INVALID",
+      "validCandidate": false,
+      "executable": false,
+      "assertionFailed": false,
+      "falsePositive": false,
+      "infrastructureFailure": false,
+      "completedAt": "2026-10-23T13:11:55.087Z",
+      "durationMs": 109045,
+      "recordHash": "878e5dfdd8c0f327478b3e35263483553d399e319bfbd130c0c5286cc8bcd653"
+    },
+    {
+      "id": "local--cmp-control-webcam-price--reproduction",
+      "model": "local",
+      "caseId": "cmp-control-webcam-price",
+      "stage": "reproduction",
+      "label": "control",
+      "status": "COMPLETE",
+      "startedAt": "2026-10-23T13:11:55.335Z",
+      "inputTokens": 2085,
+      "outputTokens": 264,
+      "modelRequests": 1,
+      "providerTimings": {
+        "totalMs": 113827.5186,
+        "loadMs": 10.1913,
+        "promptEvalMs": 61299.397,
+        "evalMs": 52408.141
+      },
+      "generationMs": 113840,
+      "runId": "b212d8e8-6987-48ca-946f-1c811451adeb",
+      "outcome": "CANDIDATE_INVALID",
+      "validCandidate": false,
+      "executable": false,
+      "assertionFailed": false,
+      "falsePositive": false,
+      "infrastructureFailure": false,
+      "completedAt": "2026-10-23T13:13:53.424Z",
+      "durationMs": 118088,
+      "recordHash": "3b3d3b2415f98a29c8f3ad594c1ee05207ca0cbc41ee28345fcef3fb845e1bf8"
+    },
+    {
+      "id": "local--cmp-usb-price--repair",
+      "model": "local",
+      "caseId": "cmp-usb-price",
+      "stage": "repair",
+      "label": "bug",
+      "status": "COMPLETE",
+      "startedAt": "2026-10-23T12:42:54.617Z",
+      "inputTokens": 3985,
+      "outputTokens": 268,
+      "modelRequests": 1,
+      "providerTimings": {
+        "totalMs": 362649.3702,
+        "loadMs": 8.5064,
+        "promptEvalMs": 269454.559,
+        "evalMs": 93016.201
+      },
+      "generationMs": 362712,
+      "runId": "run-5ae8ee2e-9d56-482d-9cf7-ab26bb9ce153",
+      "outcome": "BLOCKED",
+      "failureCode": "invalid_proposal",
+      "infrastructureFailure": false,
+      "completedAt": "2026-10-23T12:49:08.950Z",
+      "durationMs": 374332,
+      "recordHash": "82542482e6ae71f1584a7d582ea16af2905df140486c1bbf78156578a88cd40b"
+    },
+    {
+      "id": "local--cmp-usb-price--reproduction",
+      "model": "local",
+      "caseId": "cmp-usb-price",
+      "stage": "reproduction",
+      "label": "bug",
+      "status": "COMPLETE",
+      "startedAt": "2026-10-23T12:39:17.599Z",
+      "inputTokens": 2084,
+      "outputTokens": 278,
+      "modelRequests": 1,
+      "providerTimings": {
+        "totalMs": 189763.2437,
+        "loadMs": 10160.1246,
+        "promptEvalMs": 117346.78,
+        "evalMs": 62151.176
+      },
+      "generationMs": 189827,
+      "runId": "bbb65e77-9c6b-4714-8f37-b381efcbf9cc",
+      "outcome": "CANDIDATE_INVALID",
+      "validCandidate": false,
+      "executable": false,
+      "assertionFailed": false,
+      "falsePositive": false,
+      "infrastructureFailure": false,
+      "completedAt": "2026-10-23T12:42:31.210Z",
+      "durationMs": 193610,
+      "recordHash": "2743a373bbf54043b0e9d52c550bedc165296b11f2196856ecc558d0207b3f02"
+    },
+    {
+      "id": "local--cmp-webcam-name--repair",
+      "model": "local",
+      "caseId": "cmp-webcam-name",
+      "stage": "repair",
+      "label": "bug",
+      "status": "COMPLETE",
+      "startedAt": "2026-10-23T13:04:48.445Z",
+      "inputTokens": 3964,
+      "outputTokens": 197,
+      "modelRequests": 1,
+      "providerTimings": {
+        "totalMs": 288514.8818,
+        "loadMs": 65.3981,
+        "promptEvalMs": 238504.765,
+        "evalMs": 49776.681
+      },
+      "generationMs": 288593,
+      "runId": "run-230993d2-ed44-429f-a81b-a1e63531ed4d",
+      "outcome": "BLOCKED",
+      "failureCode": "invalid_proposal",
+      "infrastructureFailure": false,
+      "completedAt": "2026-10-23T13:09:47.660Z",
+      "durationMs": 299215,
+      "recordHash": "bbb08f70262fe6ba768e1a08d711a0e4fedfb6ca39918dcac38ba5d895473474"
+    },
+    {
+      "id": "local--cmp-webcam-name--reproduction",
+      "model": "local",
+      "caseId": "cmp-webcam-name",
+      "stage": "reproduction",
+      "label": "bug",
+      "status": "COMPLETE",
+      "startedAt": "2026-10-23T13:02:27.710Z",
+      "inputTokens": 2070,
+      "outputTokens": 330,
+      "modelRequests": 1,
+      "providerTimings": {
+        "totalMs": 131041.5686,
+        "loadMs": 29.6675,
+        "promptEvalMs": 63134.481,
+        "evalMs": 67636.178
+      },
+      "generationMs": 131059,
+      "runId": "22a1db46-e04d-4548-a048-beda4a47773b",
+      "outcome": "CANDIDATE_INVALID",
+      "validCandidate": false,
+      "executable": false,
+      "assertionFailed": false,
+      "falsePositive": false,
+      "infrastructureFailure": false,
+      "completedAt": "2026-10-23T13:04:43.166Z",
+      "durationMs": 135455,
+      "recordHash": "e0b92c7a8fbbd772b040c1c5ff7de64b9d3f9d44be87778406659c55e01edc1b"
+    },
+    {
+      "id": "local--cmp-webcam-quantity--repair",
+      "model": "local",
+      "caseId": "cmp-webcam-quantity",
+      "stage": "repair",
+      "label": "bug",
+      "status": "COMPLETE",
+      "startedAt": "2026-10-23T12:54:55.288Z",
+      "inputTokens": 3978,
+      "outputTokens": 366,
+      "modelRequests": 1,
+      "providerTimings": {
+        "totalMs": 439466.3859,
+        "loadMs": 18.4923,
+        "promptEvalMs": 309493.846,
+        "evalMs": 129691.025
+      },
+      "generationMs": 439591,
+      "runId": "run-cfff1d6b-d710-4a2f-8396-560f95f15719",
+      "outcome": "BLOCKED",
+      "failureCode": "invalid_proposal",
+      "infrastructureFailure": false,
+      "completedAt": "2026-10-23T13:02:27.461Z",
+      "durationMs": 452172,
+      "recordHash": "93ba8d1a0ac9fb721ebd0e4d8e63e7676c9da98ad846b7eecf393d7a3b644f40"
+    },
+    {
+      "id": "local--cmp-webcam-quantity--reproduction",
+      "model": "local",
+      "caseId": "cmp-webcam-quantity",
+      "stage": "reproduction",
+      "label": "bug",
+      "status": "COMPLETE",
+      "startedAt": "2026-10-23T12:50:25.305Z",
+      "inputTokens": 2071,
+      "outputTokens": 302,
+      "modelRequests": 1,
+      "providerTimings": {
+        "totalMs": 195068.9567,
+        "loadMs": 11.4549,
+        "promptEvalMs": 91039.061,
+        "evalMs": 103823.303
+      },
+      "generationMs": 195089,
+      "runId": "2e66d41e-ff07-45d2-b1e8-d12d8156410e",
+      "outcome": "CANDIDATE_INVALID",
+      "validCandidate": false,
+      "executable": false,
+      "assertionFailed": false,
+      "falsePositive": false,
+      "infrastructureFailure": false,
+      "completedAt": "2026-10-23T12:53:43.820Z",
+      "durationMs": 198513,
+      "recordHash": "27e5ac9953a75f1f9d526adbf2f148cb700ff8090738cb10d7a5632cb3d07d4b"
+    }
+  ]
+}

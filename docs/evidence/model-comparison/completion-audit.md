@@ -1,0 +1,24 @@
+# Implementation and evidence audit
+
+23 October 2026. Scope: implement native Ollama reproduction and patch generation, test the system, record a fair controlled comparison with the configured hosted provider, document effort/results, and activate the tested local configuration.
+
+Status: **implementation and verification complete**. The implementation does not guarantee that a small model will produce valid tests or patches.
+
+| Requirement | Authoritative evidence inspected | Finding |
+| --- | --- | --- |
+| Ollama for both generation paths, without hosted fallback | Shared native client; reproduction provider; proposal generation; provider-routing tests; all eight local benchmark response/usage records | Implemented and exercised live. Five reproduction responses and three patch responses were received; invalid content remained rejected. |
+| Explicit context, output, bounded timeout, structured output, usage/timing | Config validation and transport tests; real local HTTP test; frozen policy; live 362.7-second patch generation in one request | Verified. Long requests pair compatible fetch/dispatcher implementations; original responses are retained before compiler normalization. |
+| Baseline evidence before provider scoring | comparison-v2-final/references.json and exact evidence-runner results | All three bug tests failed on defective variants and passed unchanged after restoration; both controls passed. |
+| Separate reproduction/repair scoring and independent trusted repair tests | Frozen fixtures; 16 sealed cells; run records; generated specs; comparison CLI | Verified. Repair was attempted independently of reproduction success. Only two hosted reproductions met the report rubric and passed unchanged on fixed source. |
+| Patch/review/regression/proof integrity | Scripted benchmark review clearly identified; two VERIFIED repair records; unchanged test fingerprints; required checks; actual ZIP extraction and digest recheck | Verified two repairs, two ZIP digests, 52 payload digests. Invalid local patches did not proceed to verification. Human review remains distinct from benchmark approval. |
+| Frozen inputs and honest resume/failure accounting | Manifest 950d7b2d70e8be66caac9a8b1a63c2f86e65a723bc8d5e8532925b0ff9dc485a; completion-integrity.json; retained incomplete first run and reconciliation records | All 16 cell seals valid; primary source and recorded pipeline unchanged. Failed provider calls and invalid candidates retained. No retries to improve completed scores. |
+| Sanitized report, limitations, effort and setup | Released results.json/report.md; interpretation.md; setup guide; exact private-value scan of exported files | Verified. No private credential value matches. No raw prompts, source snapshots, logs, or proof payloads in the public JSON. Neither model had evaluable controls; hosted failure/unknown-usage cells remain explicit. |
+| Active local configuration | local-api-preflight.json; .env contains explicit local settings and legacy structuring disabled; actual API health/preflight returned 200 | Verified installed model, target, and browser ready. Hosted credentials preserved privately for explicit comparisons. |
+| Build and type gates | completion-build.log; completion-typecheck.log; completion-evaluation-typecheck.log | Both production builds and all typechecks passed. Node requirement and dependency lock agree. |
+| Complete regression gate | final-thread-full-unit.log, terminal session 80832, exit 0 | All 377 tests passed across 79 files in 300.25 seconds using thread workers. No assertions or test timeouts were changed. |
+
+Raw evidence paths above are relative to `artifacts/model-comparison/`, which remains local. The released controlled comparison is [here](comparison-v2-final/interpretation.md); implementation/setup and line-count accounting are [here](../../ollama-model-comparison.md).
+
+Default Windows process-pool attempts are preserved: one listing timeout (376 passes) followed by an unchanged six-test suite pass; one worker fast-fail before asyncRepairStart.test.ts ran (376 passes) followed by that unchanged test passing separately. The actual API returned 200 while listing 1009 records in 2428 ms. The final confirmation changes only the runner pool to threads, retaining test isolation and all assertions.
+
+The measured result is limited: local 0/3 matched bug reproductions and 0/3 verified repairs; hosted 2/3 of each with four provider-boundary failures. The observed 66.7-point completion difference is not a clean model-quality estimate. Local model reliability and unmeasured controls are disclosed limitations, not successful verification claims. Dollar cost and local energy remain unknown. Historical held-out evaluations and preexisting user edits were preserved. No deployment or merge was performed.

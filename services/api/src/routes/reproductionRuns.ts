@@ -13,6 +13,7 @@ import { cleanupRunResources, registerRunController } from "../ai/repair/runtime
 import { computeSourceManifest } from "../ai/repair/workspace";
 import fs from "fs";
 import { chromium } from "playwright";
+import type { Evidence, EvidenceType } from "@bug-to-proof/shared-types";
 
 const recordsRoot = path.join(ARTIFACTS_DIR, "reproduction-runs", "records");
 const generatedRoot = path.join(ARTIFACTS_DIR, "reproduction-runs", "generated");
@@ -101,6 +102,16 @@ reproductionRunsRouter.post("/reproduction-runs/:runId/review", async (req, res,
       currentReport: { title: bugCase.title, description: bugCase.description, steps: bugCase.report?.steps, expected: bugCase.report?.expected,
         actual: bugCase.report?.actual, startPath: bugCase.report?.startPath, context: bugCase.report?.context } });
     if (reviewed.state === "REPRODUCED" && reviewed.acceptedCandidate && reviewed.baselineRun) {
+      const baselineEvidence: Evidence[] = Object.entries(reviewed.baselineArtifacts ?? {}).flatMap(([key, artifactPath]) => {
+        if (!artifactPath) return [];
+        const type: EvidenceType = key === "resultJson" ? "result-json" : key as EvidenceType;
+        return [{ id: `ev-${reviewed.baselineRun!.runId}-${key}`, type, phase: "before", path: artifactPath,
+          createdAt: reviewed.baselineRun!.runAt, description: `Recorded before ${key}` }];
+      });
+      reviewed.baselineRun.evidenceIds = baselineEvidence.map(item => item.id);
+      bugCase.evidence ??= [];
+      const existingEvidenceIds = new Set(bugCase.evidence.map(item => item.id));
+      bugCase.evidence.push(...baselineEvidence.filter(item => !existingEvidenceIds.has(item.id)));
       bugCase.reproduction = { preconditions: [], steps: bugCase.report?.steps ?? [], expected: bugCase.report?.expected ?? "",
         actual: bugCase.report?.actual ?? "", testFile: reviewed.acceptedCandidate.frozenTestPath, testRoot: acceptedRoot,
         generatedTest: { reproductionRunId: reviewed.reproductionRunId, definitionHash: reviewed.acceptedCandidate.definitionHash,

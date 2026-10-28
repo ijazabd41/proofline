@@ -43,8 +43,46 @@ const mockRun = {
 };
 
 describe("AIAssistant Component", () => {
+  it("publishes restored repair state to the surrounding case view", async () => {
+    const onRunChange = vi.fn();
+    const verified = { ...mockRun, state: "VERIFIED" };
+    globalThis.fetch = vi.fn(async (url: any) => ({ ok: true, json: async () => String(url).includes("repair-runs") ? [verified] : {} })) as any;
+    render(<AIAssistant caseId="case-001" onComplete={vi.fn().mockResolvedValue(undefined)} onRunChange={onRunChange} />);
+    await waitFor(() => expect(onRunChange).toHaveBeenCalledWith(verified));
+  });
+  it("explains a restored failed attempt and the new approval, with readable test-target feedback", async () => {
+    const retry = { ...mockRun, attempt: 2, attempts: [
+      { attemptNumber: 1, state: "VERIFICATION_FAILED", failureReason: 'BTP_ASSERTION: targetCurrencySumEquals Received: "<missing-or-ambiguous>"' },
+      { attemptNumber: 2, state: "AWAITING_REVIEW" },
+    ], events: [{ stage: "retry", message: "Restoring pristine workspace.", timestamp: "2026-10-23" }] };
+    globalThis.fetch = vi.fn(async (url: any) => ({ ok: true, json: async () => String(url).includes("repair-runs") ? [retry] : {} })) as any;
+    render(<AIAssistant caseId="case-001" onComplete={vi.fn().mockResolvedValue(undefined)} />);
+    expect(await screen.findByText("Reproduction test needs attention")).toBeInTheDocument();
+    expect(screen.getByText(/previous candidate changes were rolled back/i)).toBeInTheDocument();
+    expect(screen.getByText(/attempt 2 is a new proposal/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /approve & apply exact patch/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Cancel Run" })).toBeInTheDocument();
+  });
   beforeEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it("shows approval progress and makes a retried proposal visibly require fresh approval", async () => {
+    let finishReview!: (value: any) => void;
+    const retried = { ...mockRun, attempt: 2, proposal: { ...mockRun.proposal, proposalId: "prop-new" },
+      attempts: [{ attemptNumber: 1, state: "VERIFICATION_FAILED", failureReason: "Expected total 30; received 25" }, { attemptNumber: 2, state: "AWAITING_REVIEW" }],
+      events: [{ stage: "retry", message: "Restoring pristine workspace.", timestamp: "2026-10-23" }] };
+    globalThis.fetch = vi.fn((url: any) => {
+      if (String(url).endsWith("/review")) return new Promise(resolve => { finishReview = resolve; });
+      return Promise.resolve({ ok: true, json: async () => String(url).includes("repair-runs") ? [mockRun] : {} });
+    }) as any;
+    render(<AIAssistant caseId="case-001" onComplete={vi.fn().mockResolvedValue(undefined)} />);
+    fireEvent.click(await screen.findByRole("button", { name: /approve & apply exact patch/i }));
+    expect(await screen.findByText("Submitting your approval")).toBeInTheDocument();
+    finishReview({ ok: true, json: async () => retried });
+    expect(await screen.findByText(/attempt 2 is a new proposal/i)).toBeInTheDocument();
+    expect(screen.getByText("Waiting for your approval")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /approve & apply exact patch/i })).toBeEnabled();
   });
 
   it("restores saved repair runs on case load and renders proposal", async () => {

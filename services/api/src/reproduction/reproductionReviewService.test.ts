@@ -55,6 +55,8 @@ describe("reproduction candidate review and frozen baseline", () => {
       acceptedBy: "human" });
     expect(result.acceptedCandidate?.frozenTestPath.endsWith(path.join("accepted", "review-run", "reproduction.spec.ts"))).toBe(true);
     expect(result.baselineRun).toMatchObject({ outcome: "ASSERTION_FAILED", testFingerprint: "frozen-fingerprint" });
+    expect(result.baselineArtifacts).toEqual({ resultJson: "result.json" });
+    expect(result.baselineRun?.evidenceIds).toEqual(["ev-confirmed-resultJson"]);
     expect(f.execute).toHaveBeenCalledWith(expect.objectContaining({ testFile: result.acceptedCandidate?.frozenTestPath }));
     expect(fs.readFileSync(result.acceptedCandidate!.frozenTestPath, "utf8")).toBe(f.compiled.source);
   });

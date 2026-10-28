@@ -6,8 +6,9 @@ import {
   generateUnifiedDiff,
   applyEditsTransactionally,
   isAllowedEditablePath,
+  computeExpectedPatchedFingerprint,
 } from "./patchPolicy";
-import { createRunWorkspace, releaseWorkspaceLock } from "./workspace";
+import { createRunWorkspace, releaseWorkspaceLock, computeSourceManifest } from "./workspace";
 import { ARTIFACTS_DIR } from "../../utils/paths";
 
 import { randomUUID } from "crypto";
@@ -39,6 +40,24 @@ describe("Dynamic AI Repair Patch Policy", () => {
     expect(isAllowedEditablePath("src/store/cartStore.test.ts")).toBe(false);
     expect(isAllowedEditablePath("vite.config.ts")).toBe(false);
     expect(isAllowedEditablePath("package.json")).toBe(false);
+  });
+
+  it.each(["\n", "\r\n"])("predicts the complete fingerprint for multiple edits to one file (%j)", (newline) => {
+    const file = path.join(ws.minishopDir, "src/pages/ReviewFixture.tsx");
+    fs.writeFileSync(file, ["const total = subtotal;", "const fee = shipping;", ""].join(newline));
+    const original = computeSourceManifest(ws.minishopDir).fingerprint;
+    const edits = [
+      { relativePath: "src/pages/ReviewFixture.tsx", oldContent: "const total = subtotal;", newContent: "const total = subtotal + shipping;" },
+      { relativePath: "apps/minishop/src/pages/ReviewFixture.tsx", oldContent: "const fee = shipping;", newContent: "const fee = shipping;\nconst includesShipping = true;" },
+    ];
+    const expected = computeExpectedPatchedFingerprint(ws.minishopDir, edits);
+    expect(applyEditsTransactionally(ws.minishopDir, edits).success).toBe(true);
+    expect(computeSourceManifest(ws.minishopDir).fingerprint).toBe(expected);
+    expect(fs.readFileSync(file, "utf8")).toBe(["const total = subtotal + shipping;", "const fee = shipping;", "const includesShipping = true;", ""].join(newline));
+    fs.appendFileSync(file, "\n// unrelated change\n");
+    const mutated = computeSourceManifest(ws.minishopDir).fingerprint;
+    expect(mutated).not.toBe(original);
+    expect(mutated).not.toBe(expected);
   });
 
   it("validates valid edits and rejects invalid or ambiguous edits", () => {

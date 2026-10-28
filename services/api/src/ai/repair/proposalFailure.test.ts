@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { classifyProposalFailure } from "./proposalFailure";
 
+it("distinguishes an invalid patch snippet from a missing provider model", () => {
+  const failure = classifyProposalFailure(new Error("Model proposed invalid edits: oldContent not found in src/components/Cart.tsx"));
+  expect(failure.boundary).toBe("invalid_proposal");
+});
+
 describe("repair proposal provider failure diagnostics", () => {
   it.each([
     ["401 Unauthorized", "authentication_failed"],

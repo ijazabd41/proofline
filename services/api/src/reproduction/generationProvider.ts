@@ -1,5 +1,6 @@
 import { ragConfig } from "../ai/providers";
 import { callLLMWithDiagnostics, type LLMCallResult } from "../llm/client";
+import { REPRODUCTION_JSON_SCHEMA } from "./definitionSchema";
 import type { GenerationContext, GenerationResult } from "./reproductionService";
 
 export const REPRODUCTION_SYSTEM_POLICY = "Generate only one strict JSON ReproductionDefinitionV1 object. Never emit code, markdown, selectors, URLs, imports, shell commands, or commentary.";
@@ -99,7 +100,7 @@ export function buildReproductionPrompt(context: GenerationContext): string {
     attempt: context.attempt,
     previousDiagnostics: context.previousDiagnostics.map(value => value.slice(0, 2_000)),
   };
-  return `${REPRODUCTION_SYSTEM_POLICY}\nSchema version: 1.0. Use exactly the required keys and one allowed shape for each array item. The assertion must be exactly one object, never an array. JSON string placeholders below describe value types; replace them with values. Prefer clickTarget, fillTarget, and target assertions whenever an exact allowed.targets testId exists. Use only supplied routes, exact accessible roles/names, exact target testIds, and product IDs. Never invent headings, controls, target IDs, expected values, or extra steps. Do not combine seedCart for a product with click/clickTarget add actions for the same setup. Hard navigation after an interactive state change can discard the in-memory cart; click a discovered link to navigate instead of using goto or reload. For navigation assertions, prefer clickTarget with an allowed navigation testId and urlPathEquals. Use targetVisibilityEquals for existence; targetTextEquals requires the entire target text to equal the expected string. Do not assert a validation message by reading a textbox's text content; use the discovered status or message target. If the report says to wait for validation or other asynchronous behavior, wait for the reported result after asynchronous actions before asserting it. The assertion expected value must come from report.expected, not report.actual. When report.expected is a relational currency expectation such as total equals subtotal plus shipping, use targetCurrencySumEquals with discovered result and term testIds; never copy that prose into targetTextEquals.expected. Map the assertion to report facts.\nSCHEMA_GUIDANCE:\n${JSON.stringify(REPRODUCTION_SCHEMA_GUIDANCE)}\nINPUT_JSON:\n${JSON.stringify(safeContext)}`;
+  return `${REPRODUCTION_SYSTEM_POLICY}\nSchema version: 1.0. Use exactly the required keys and one allowed shape for each array item. The assertion must be exactly one object, never an array. JSON string placeholders below describe value types; replace them with values. Prefer clickTarget, fillTarget, and target assertions whenever an exact allowed.targets testId exists. Use only supplied routes, exact accessible roles/names, exact target testIds, and product IDs. Never invent headings, controls, target IDs, expected values, or extra steps. Use the fewest actions needed by the report. The runner opens startPath automatically: when the reported value is already visible there, use empty steps and no cart setup. Do not click a text or price target just to read it; assert on it. Do not combine seedCart for a product with click/clickTarget add actions for the same setup. Hard navigation after an interactive state change can discard the in-memory cart; click a discovered link to navigate instead of using goto or reload. For navigation assertions, prefer clickTarget with an allowed navigation testId and urlPathEquals. Use targetVisibilityEquals for existence; targetTextEquals requires the entire target text to equal the expected string. Do not assert a validation message by reading a textbox's text content; use the discovered status or message target. If the report says to wait for validation or other asynchronous behavior, wait for the reported result after asynchronous actions before asserting it. The assertion expected value must come from report.expected, not report.actual. When report.expected is a relational currency expectation such as total equals subtotal plus shipping, use targetCurrencySumEquals with discovered result and term testIds; never copy that prose into targetTextEquals.expected. Map the assertion to report facts.\nSCHEMA_GUIDANCE:\n${JSON.stringify(REPRODUCTION_SCHEMA_GUIDANCE)}\nINPUT_JSON:\n${JSON.stringify(safeContext)}`;
 }
 
 export async function generateReproductionCandidate(context: GenerationContext, abortSignal?: AbortSignal): Promise<GenerationResult> {
@@ -113,12 +114,14 @@ export async function generateReproductionCandidate(context: GenerationContext, 
     if (!config.generationModel) throw new GenerationProviderError("Set RAG_GENERATION_MODEL", config.generationProvider, "", "request_not_sent:model_missing", 0);
     const apiKey = config.generationProvider === "openai" ? process.env.RAG_GENERATION_API_KEY || process.env.LLM_API_KEY || process.env.OPENAI_API_KEY : undefined;
     response = await callLLMWithDiagnostics(prompt, config.timeoutMs, abortSignal, REPRODUCTION_MAX_OUTPUT_TOKENS,
-      { apiUrl: config.generationBaseUrl, apiKey, model: config.generationModel, protocol: config.generationProvider });
+      { apiUrl: config.generationBaseUrl, apiKey, model: config.generationModel, protocol: config.generationProvider, contextTokens: config.generationContextTokens, jsonMode: config.generationJsonMode,
+        ...(config.generationStructuredOutputs ? { schema: REPRODUCTION_JSON_SCHEMA } : {}) });
   }
   if (!response.content && (response.responseShape.startsWith("request_") || response.responseShape.startsWith("http_error:"))) {
     throw new GenerationProviderError(providerFailureMessage(response.responseShape), config.generationProvider,
       config.generationModel || "legacy", response.responseShape, response.requestAttempts ?? 1, response.httpStatus);
   }
   return { raw: response.content, responseShape: response.responseShape, provider: config.generationProvider,
-    model: config.generationModel || "legacy", requestAttempts: response.requestAttempts ?? 1 };
+    model: config.generationModel || "legacy", requestAttempts: response.requestAttempts ?? 1,
+    usage: response.usage, timings: response.timings };
 }

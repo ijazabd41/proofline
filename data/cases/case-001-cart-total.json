@@ -4,7 +4,7 @@
   "description": "When multiple items are added to the cart, the total displays only the first item price instead of the sum of all items.",
   "status": "REPRODUCTION_FAILED",
   "createdAt": "2026-10-09T08:29:30.148Z",
-  "updatedAt": "2026-10-15T21:05:59.985Z",
+  "updatedAt": "2026-10-24T10:22:57.990Z",
   "reproduction": {
     "preconditions": [],
     "steps": [
@@ -14,23 +14,23 @@
     "actual": "Defect observed",
     "testFile": "tests/playwright/cases/case-001-cart-total.spec.ts",
     "lastRun": {
-      "runAt": "2026-10-15T21:05:59.985Z",
-      "passed": true,
       "outcome": "PASSED",
-      "actual": "All selected tests passed",
-      "expected": "All assertions pass",
-      "durationMs": 7057,
-      "runId": "e624e89b-c53c-482c-9ac6-31d251e5f10a",
-      "testFingerprint": "8768f154ce1bde6ca8ceed591bfe83f4d33d1e955568c2d08997f6335f2287c7",
+      "testFingerprint": "29b16488593bc99f425cb814d59b086f0d1650749d0348f6e132af7622d910c6",
       "testIds": [
         "case-001-cart-total.spec.ts:cart total should equal sum of all item prices:chromium",
         "case-001-cart-total.spec.ts:cart total should update when items are added incrementally:chromium"
       ],
-      "reportHash": "bbcfc685fca3b14101eb995b1fa53f4b60d84e5532d7aa1f5cd274830e9d9836",
+      "runId": "d9e950c2-6e6f-4e3c-b285-ba5031aa1d34",
+      "reportHash": "b6bfeda6854df510cda87efe35628ef29aa87d7d6b60ce74911e1123eeca7931",
+      "runAt": "2026-10-24T10:22:57.989Z",
+      "passed": true,
+      "expected": "All assertions pass",
+      "actual": "All selected tests passed",
+      "durationMs": 18953,
       "evidenceIds": [
-        "ev-e624e89b-c53c-482c-9ac6-31d251e5f10a-resultJson",
-        "ev-e624e89b-c53c-482c-9ac6-31d251e5f10a-screenshot",
-        "ev-e624e89b-c53c-482c-9ac6-31d251e5f10a-trace"
+        "ev-case-001-cart-total-d9e950c2-6e6f-4e3c-b285-ba5031aa1d34-before-screenshot",
+        "ev-case-001-cart-total-d9e950c2-6e6f-4e3c-b285-ba5031aa1d34-before-trace",
+        "ev-case-001-cart-total-d9e950c2-6e6f-4e3c-b285-ba5031aa1d34-before-result"
       ]
     }
   },
@@ -38,23 +38,23 @@
   "verification": {
     "status": "PENDING",
     "beforeRun": {
-      "runAt": "2026-10-15T21:05:59.985Z",
-      "passed": true,
       "outcome": "PASSED",
-      "actual": "All selected tests passed",
-      "expected": "All assertions pass",
-      "durationMs": 7057,
-      "runId": "e624e89b-c53c-482c-9ac6-31d251e5f10a",
-      "testFingerprint": "8768f154ce1bde6ca8ceed591bfe83f4d33d1e955568c2d08997f6335f2287c7",
+      "testFingerprint": "29b16488593bc99f425cb814d59b086f0d1650749d0348f6e132af7622d910c6",
       "testIds": [
         "case-001-cart-total.spec.ts:cart total should equal sum of all item prices:chromium",
         "case-001-cart-total.spec.ts:cart total should update when items are added incrementally:chromium"
       ],
-      "reportHash": "bbcfc685fca3b14101eb995b1fa53f4b60d84e5532d7aa1f5cd274830e9d9836",
+      "runId": "d9e950c2-6e6f-4e3c-b285-ba5031aa1d34",
+      "reportHash": "b6bfeda6854df510cda87efe35628ef29aa87d7d6b60ce74911e1123eeca7931",
+      "runAt": "2026-10-24T10:22:57.989Z",
+      "passed": true,
+      "expected": "All assertions pass",
+      "actual": "All selected tests passed",
+      "durationMs": 18953,
       "evidenceIds": [
-        "ev-e624e89b-c53c-482c-9ac6-31d251e5f10a-resultJson",
-        "ev-e624e89b-c53c-482c-9ac6-31d251e5f10a-screenshot",
-        "ev-e624e89b-c53c-482c-9ac6-31d251e5f10a-trace"
+        "ev-case-001-cart-total-d9e950c2-6e6f-4e3c-b285-ba5031aa1d34-before-screenshot",
+        "ev-case-001-cart-total-d9e950c2-6e6f-4e3c-b285-ba5031aa1d34-before-trace",
+        "ev-case-001-cart-total-d9e950c2-6e6f-4e3c-b285-ba5031aa1d34-before-result"
       ]
     },
     "afterRun": null,
@@ -132,6 +132,54 @@
       "path": "artifacts/case-001-cart-total/before/e624e89b-c53c-482c-9ac6-31d251e5f10a/case-001-cart-total-Case-0-3c8dc-qual-sum-of-all-item-prices-chromium/trace.zip",
       "createdAt": "2026-10-15T21:05:59.985Z",
       "description": "Recorded before trace"
+    },
+    {
+      "id": "ev-case-001-cart-total-85132f5b-8cb2-4a52-b50c-64f69801b5db-before-screenshot",
+      "type": "screenshot",
+      "phase": "before",
+      "path": "artifacts/case-001-cart-total/before/85132f5b-8cb2-4a52-b50c-64f69801b5db/case-001-cart-total-Case-0-3c8dc-qual-sum-of-all-item-prices-chromium/test-finished-1.png",
+      "createdAt": "2026-10-23T08:51:11.581Z",
+      "description": "Screenshot captured before patch"
+    },
+    {
+      "id": "ev-case-001-cart-total-85132f5b-8cb2-4a52-b50c-64f69801b5db-before-trace",
+      "type": "trace",
+      "phase": "before",
+      "path": "artifacts/case-001-cart-total/before/85132f5b-8cb2-4a52-b50c-64f69801b5db/case-001-cart-total-Case-0-3c8dc-qual-sum-of-all-item-prices-chromium/trace.zip",
+      "createdAt": "2026-10-23T08:51:11.581Z",
+      "description": "Playwright trace before patch"
+    },
+    {
+      "id": "ev-case-001-cart-total-85132f5b-8cb2-4a52-b50c-64f69801b5db-before-result",
+      "type": "result-json",
+      "phase": "before",
+      "path": "artifacts/case-001-cart-total/before/85132f5b-8cb2-4a52-b50c-64f69801b5db/result.json",
+      "createdAt": "2026-10-23T08:51:11.581Z",
+      "description": "Raw Playwright JSON result before patch"
+    },
+    {
+      "id": "ev-case-001-cart-total-d9e950c2-6e6f-4e3c-b285-ba5031aa1d34-before-screenshot",
+      "type": "screenshot",
+      "phase": "before",
+      "path": "artifacts/case-001-cart-total/before/d9e950c2-6e6f-4e3c-b285-ba5031aa1d34/case-001-cart-total-Case-0-3c8dc-qual-sum-of-all-item-prices-chromium/test-finished-1.png",
+      "createdAt": "2026-10-24T10:22:57.989Z",
+      "description": "Screenshot captured before patch"
+    },
+    {
+      "id": "ev-case-001-cart-total-d9e950c2-6e6f-4e3c-b285-ba5031aa1d34-before-trace",
+      "type": "trace",
+      "phase": "before",
+      "path": "artifacts/case-001-cart-total/before/d9e950c2-6e6f-4e3c-b285-ba5031aa1d34/case-001-cart-total-Case-0-3c8dc-qual-sum-of-all-item-prices-chromium/trace.zip",
+      "createdAt": "2026-10-24T10:22:57.989Z",
+      "description": "Playwright trace before patch"
+    },
+    {
+      "id": "ev-case-001-cart-total-d9e950c2-6e6f-4e3c-b285-ba5031aa1d34-before-result",
+      "type": "result-json",
+      "phase": "before",
+      "path": "artifacts/case-001-cart-total/before/d9e950c2-6e6f-4e3c-b285-ba5031aa1d34/result.json",
+      "createdAt": "2026-10-24T10:22:57.989Z",
+      "description": "Raw Playwright JSON result before patch"
     }
   ],
   "rootCauseExplanation": null,

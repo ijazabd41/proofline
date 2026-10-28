@@ -3,8 +3,9 @@ import type { ModelProposal, ProposalEdit, RepairRunConfig } from "./contracts";
 import { computeProposalHash } from "./contracts";
 import { validateEdits, generateUnifiedDiff, normalizeRelativePath } from "./patchPolicy";
 import { listSourceFiles, readSourceFile } from "./tools";
-import { generateAnswer, ragConfig } from "../providers";
+import { generateWithDiagnostics, ragConfig } from "../providers";
 import { callLLM } from "../../llm/client";
+import { PATCH_JSON_SCHEMA } from "../../reproduction/definitionSchema";
 
 export interface GenerateProposalInput {
   caseTitle: string;
@@ -16,6 +17,8 @@ export interface GenerateProposalInput {
   config?: RepairRunConfig;
   runId?: string;
   abortSignal?: AbortSignal;
+  onGeneration?: (metadata: NonNullable<ModelProposal["generation"]>) => void;
+  onRawResponse?: (text: string) => void;
 }
 
 export function parseModelProposalJson(rawText: string): {
@@ -148,6 +151,7 @@ ${sourceSnippets.join("\n\n")}
 Task:
 Analyze the bug report and the source code.
 Identify the root cause and provide a minimal, correct patch to fix the bug.
+Copy oldContent verbatim from one of the supplied files, preserving punctuation and whitespace. Do not rewrite it as equivalent code or invent a statement that is not present. Prefer replacing the smallest unique expression that causes the bug.
 Provide your response strictly in the following JSON format without extra commentary:
 
 {
@@ -165,13 +169,18 @@ Provide your response strictly in the following JSON format without extra commen
 `;
 
   let responseText = "";
+  let generation: ModelProposal["generation"];
   if (input.abortSignal?.aborted) {
     throw new Error("Model generation request aborted");
   }
   try {
     const ragConf = ragConfig();
     if (ragConf.generationProvider !== "disabled" && ragConf.generationProvider !== "legacy") {
-      responseText = await generateAnswer(prompt, ragConf, input.abortSignal);
+      const response = await generateWithDiagnostics(prompt, ragConf, input.abortSignal, PATCH_JSON_SCHEMA);
+      responseText = response.content;
+      generation = { provider: ragConf.generationProvider, model: ragConf.generationModel, requestAttempts: response.requestAttempts ?? 1, usage: response.usage, timings: response.timings };
+      input.onGeneration?.(generation);
+      if (!responseText && /^(request_|http_error:)/.test(response.responseShape)) throw new Error(`Provider ${response.responseShape}`);
     } else {
       responseText = await callLLM(prompt, 30_000, input.abortSignal);
     }
@@ -182,6 +191,8 @@ Provide your response strictly in the following JSON format without extra commen
   if (!responseText || !responseText.trim()) {
     throw new Error("Model returned an empty response. Verify LLM configuration and credentials.");
   }
+
+  input.onRawResponse?.(responseText);
 
   const parsed = parseModelProposalJson(responseText);
 
@@ -195,6 +206,7 @@ Provide your response strictly in the following JSON format without extra commen
 
   return {
     schemaVersion: "1.0",
+    generation,
     proposalId: `prop-${randomUUID()}`,
     diagnosis: parsed.diagnosis,
     assumptions: parsed.assumptions,

@@ -1,4 +1,4 @@
-# Bug-to-Proof documentation
+# Proofline documentation
 
 This page is the documentation entry point. Documents are grouped by purpose and freshness so historical audit results are not mistaken for current product capability.
 
@@ -26,6 +26,8 @@ Raw runtime evidence is intentionally Git-ignored. Artifact links in historical 
 | [Dynamic demo script](dynamic-demo-script.md) | Arbitrary-report generation, review, frozen baseline, and proof walkthrough |
 | [Architecture diagrams](architecture.md) | System, lifecycle, and trust-boundary diagrams for documentation and presentations |
 | [Portfolio release notes](portfolio-release.md) | Resume bullet, LinkedIn draft, verified metrics, and claim boundary |
+| [Ollama and model comparison](ollama-model-comparison.md) | Local reproduction/repair setup and recorded paired evaluation |
+| [Shareable reference evidence](evidence/portfolio-reference.md) | Fresh configured-case before/after screenshots, video, and sanitized provenance |
 | [Sanitized AR7 evaluation](evidence/ar7-evaluation.md) | Public scorecard, provenance hashes, and honest claim boundary |
 | [Prospective v2 reference verification](evidence/prospective-v2-reference.md) | Frozen cohort and independent browser ground truth |
 | [Prospective v2 live evaluation](evidence/prospective-v2-live-evaluation.md) | One-time Groq held-out run, candidate review, and observed 4/12 report matches |
@@ -37,7 +39,7 @@ Raw runtime evidence is intentionally Git-ignored. Artifact links in historical 
 | [Post-evaluation USB-total diagnostic](evidence/p5-usb-retry-diagnostic.md) | Separate retry of the v5 HTTP-429 case; report-matched failure and unchanged-test fixed-source pass, excluded from v5 scoring |
 | [RAG architecture and interview guide](rag-interview-guide.md) | Retrieval providers, evaluation, tradeoffs, and interview explanation |
 | [Design concepts](design-concepts/prompts.md) | Dashboard concept prompts; mock data is illustrative |
-| [Demo recording](../demo_recording.md) | Historical configured-case demo recording |
+| [Demo recording](../demo_recording.md) | Current reference walkthrough and separately labeled historical recording |
 
 ## Point-in-time reports
 

@@ -51,6 +51,7 @@ export interface ProposalEdit {
 }
 
 export interface ModelProposal {
+  generation?: { provider: string; model: string; requestAttempts: number; usage?: import("../../llm/client").LLMUsage; timings?: import("../../llm/client").LLMTimings };
   schemaVersion: "1.0";
   proposalId: string;
   diagnosis: string;
@@ -177,6 +178,7 @@ export interface RepairRunRecord {
 }
 
 export interface RepairRunConfig {
+  regressionTimeoutMs?: number;
   mode?: "dynamic" | "simulated";
   provider?: "openai" | "ollama" | "simulated";
   model?: string;

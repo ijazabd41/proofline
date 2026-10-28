@@ -5,12 +5,13 @@ import type { RunResult } from "../runner/playwrightRunner";
 import { DEFAULT_REPRODUCTION_LIMITS, type ReportSnapshot, type ReproductionLimits, type ReproductionRunRecord, type ReproductionRunState } from "./contracts";
 import { validateCandidateAgainstDiscovery } from "./candidatePolicy";
 import { persistCompiledReproduction, validateReproductionDefinition } from "./definitionCompiler";
+import { normalizeStructuredDefinition } from "./definitionSchema";
 import { persistTargetDiscovery, type TargetDiscoverySnapshot } from "./targetDiscovery";
 import { GenerationProviderError } from "./generationProvider";
 import type { ReproductionRunStore } from "./reproductionRunStore";
 
 export const REPRODUCTION_PROMPT_VERSION = "reproduction-v2";
-export interface GenerationResult { raw: string; provider: string; model: string; responseShape?: string; requestAttempts?: number; usage?: { inputTokens?: number; outputTokens?: number; costUsd?: number } }
+export interface GenerationResult { raw: string; provider: string; model: string; responseShape?: string; requestAttempts?: number; usage?: { inputTokens?: number; outputTokens?: number; costUsd?: number }; timings?: import("../llm/client").LLMTimings }
 export interface GenerationContext { report: ReportSnapshot; discovery: TargetDiscoverySnapshot; attempt: number; previousDiagnostics: readonly string[]; promptVersion: typeof REPRODUCTION_PROMPT_VERSION }
 export interface ReproductionServiceDependencies {
   store: ReproductionRunStore; generatedRoot: string;
@@ -67,13 +68,13 @@ export class ReproductionService {
         diagnostics.push(bounded(diagnostic, limits.maxDiagnosticBytes)); run.stopReason = "Generation provider failed"; transition("BLOCKED", diagnostics.at(-1)!); run.completedAt = now(); this.deps.store.write(run); return run;
       }
       const rawArtifact = persistRawOutput(this.deps.generatedRoot, runId, attemptNumber, generated.raw, limits.maxDefinitionBytes);
-      const parsed = validateReproductionDefinition(generated.raw); const policy = parsed.ok ? validateCandidateAgainstDiscovery(parsed.value, discovery) : { ok: false, findings: parsed.errors };
+      const parsed = validateReproductionDefinition(normalizeStructuredDefinition(generated.raw)); const policy = parsed.ok ? validateCandidateAgainstDiscovery(parsed.value, discovery) : { ok: false, findings: parsed.errors };
       if (!parsed.ok || !policy.ok) {
         const finding = (!generated.raw.trim() && generated.responseShape
           ? `Provider response contained no usable text (${generated.responseShape})`
           : policy.findings.join("; ")).slice(0, limits.maxDiagnosticBytes); diagnostics.push(finding);
         run.attempts = [...run.attempts, { attempt: attemptNumber, attemptExecutionId, provider: generated.provider, model: generated.model, promptVersion: REPRODUCTION_PROMPT_VERSION,
-          responseShape: generated.responseShape, requestAttempts: generated.requestAttempts, classification: "CANDIDATE_INVALID", diagnostics: finding, validationFindings: policy.findings, durationMs: Date.now() - started, usage: generated.usage, artifactPaths: [artifactReference(rawArtifact, this.deps.generatedRoot)] }];
+          responseShape: generated.responseShape, requestAttempts: generated.requestAttempts, classification: "CANDIDATE_INVALID", diagnostics: finding, validationFindings: policy.findings, durationMs: Date.now() - started, usage: generated.usage, timings: generated.timings, artifactPaths: [artifactReference(rawArtifact, this.deps.generatedRoot)] }];
         transition("CANDIDATE_INVALID", `Candidate ${attemptNumber} failed validation`); continue;
       }
       if (this.inputsChanged(discovery)) return this.blockChangedInputs(run, attemptNumber, attemptExecutionId, generated, rawArtifact, now, parsed.value);
@@ -86,7 +87,7 @@ export class ReproductionService {
         const diagnostic = bounded(error, limits.maxDiagnosticBytes);
         run.attempts = [...run.attempts, { attempt: attemptNumber, attemptExecutionId, provider: generated.provider, model: generated.model,
           promptVersion: REPRODUCTION_PROMPT_VERSION, classification: "CANDIDATE_EXECUTION_ERROR", failureKind: "INVALID_REPORT",
-          diagnostics: diagnostic, durationMs: Date.now() - started, usage: generated.usage, artifactPaths: [artifactReference(rawArtifact, this.deps.generatedRoot)] }];
+          diagnostics: diagnostic, durationMs: Date.now() - started, usage: generated.usage, timings: generated.timings, artifactPaths: [artifactReference(rawArtifact, this.deps.generatedRoot)] }];
         transition("BLOCKED", `Candidate execution failed unexpectedly: ${diagnostic}`); run.stopReason = "Candidate execution infrastructure failed";
         run.completedAt = now(); this.deps.store.write(run); return run;
       }
@@ -94,7 +95,7 @@ export class ReproductionService {
       if (input.abortSignal?.aborted) {
         run.attempts = [...run.attempts, { attempt: attemptNumber, attemptExecutionId, definition: parsed.value, definitionHash: compiled.definitionHash, compilerVersion: compiled.compilerVersion,
           compiledTestHash: compiled.compiledHash, provider: generated.provider, model: generated.model, promptVersion: REPRODUCTION_PROMPT_VERSION,
-          classification: "CANDIDATE_EXECUTION_ERROR", failureKind: "CANCELLED", diagnostics: "Candidate execution was cancelled", durationMs: execution.durationMs, usage: generated.usage,
+          classification: "CANDIDATE_EXECUTION_ERROR", failureKind: "CANCELLED", diagnostics: "Candidate execution was cancelled", durationMs: execution.durationMs, usage: generated.usage, timings: generated.timings,
           artifactPaths: [artifactReference(rawArtifact, this.deps.generatedRoot), artifactReference(compiled.filePath, this.deps.generatedRoot), ...Object.values(execution.artifactPaths).filter((value): value is string => !!value)] }];
         transition("CANCELLED", "Candidate execution was cancelled"); run.stopReason = "Cancelled by user"; run.completedAt = now(); this.deps.store.write(run); return run;
       }
@@ -102,7 +103,7 @@ export class ReproductionService {
         run.attempts = [...run.attempts, { attempt: attemptNumber, attemptExecutionId, definition: parsed.value, definitionHash: compiled.definitionHash,
           compilerVersion: compiled.compilerVersion, compiledTestHash: compiled.compiledHash, provider: generated.provider, model: generated.model,
           promptVersion: REPRODUCTION_PROMPT_VERSION, classification: "CANDIDATE_EXECUTION_ERROR", failureKind: execution.failureKind,
-          diagnostics: bounded(execution.actual, limits.maxDiagnosticBytes), durationMs: execution.durationMs, usage: generated.usage,
+          diagnostics: bounded(execution.actual, limits.maxDiagnosticBytes), durationMs: execution.durationMs, usage: generated.usage, timings: generated.timings,
           artifactPaths: [artifactReference(rawArtifact, this.deps.generatedRoot), artifactReference(compiled.filePath, this.deps.generatedRoot), ...Object.values(execution.artifactPaths).filter((value): value is string => !!value)] }];
         transition("BLOCKED", `Target outage: ${bounded(execution.actual, limits.maxDiagnosticBytes)}`);
         run.stopReason = execution.failureKind === "TARGET_UNREACHABLE" ? "Target is unreachable" : execution.failureKind === "BROWSER_UNAVAILABLE" ? "Browser is unavailable" : "Execution inputs changed";
@@ -112,7 +113,7 @@ export class ReproductionService {
       run.attempts = [...run.attempts, { attempt: attemptNumber, attemptExecutionId, definition: parsed.value, definitionHash: compiled.definitionHash, compilerVersion: compiled.compilerVersion,
         compiledTestHash: compiled.compiledHash, provider: generated.provider, model: generated.model, promptVersion: REPRODUCTION_PROMPT_VERSION, classification, requestAttempts: generated.requestAttempts,
         failureKind: execution.failureKind,
-        diagnostics: bounded(execution.actual, limits.maxDiagnosticBytes), durationMs: execution.durationMs, usage: generated.usage,
+        diagnostics: bounded(execution.actual, limits.maxDiagnosticBytes), durationMs: execution.durationMs, usage: generated.usage, timings: generated.timings,
         artifactPaths: [artifactReference(rawArtifact, this.deps.generatedRoot), artifactReference(compiled.filePath, this.deps.generatedRoot), ...Object.values(execution.artifactPaths).filter((value): value is string => !!value)] }];
       if (classification === "ASSERTION_FAILED") { transition("AWAITING_TEST_REVIEW", "Candidate produced a structured assertion failure and requires review"); return run; }
       if (classification === "BASELINE_PASSED") {
@@ -134,7 +135,7 @@ export class ReproductionService {
     run.attempts = [...run.attempts, { attempt, attemptExecutionId, definition, definitionHash: compiled?.definitionHash, compilerVersion: compiled?.compilerVersion,
       compiledTestHash: compiled?.compiledHash, provider: generated.provider, model: generated.model, promptVersion: REPRODUCTION_PROMPT_VERSION,
       classification: "CANDIDATE_EXECUTION_ERROR", failureKind: "INPUTS_CHANGED", diagnostics: "MiniShop source changed after discovery",
-      durationMs: execution?.durationMs, usage: generated.usage, artifactPaths: [artifactReference(rawArtifact, this.deps.generatedRoot), ...(compiled ? [artifactReference(compiled.filePath, this.deps.generatedRoot)] : []),
+      durationMs: execution?.durationMs, usage: generated.usage, timings: generated.timings, artifactPaths: [artifactReference(rawArtifact, this.deps.generatedRoot), ...(compiled ? [artifactReference(compiled.filePath, this.deps.generatedRoot)] : []),
         ...Object.values(execution?.artifactPaths ?? {}).filter((value): value is string => !!value)] }];
     run.state = "BLOCKED"; run.stopReason = "MiniShop source changed after discovery"; run.updatedAt = now(); run.completedAt = run.updatedAt;
     run.events = [...run.events, { sequence: run.events.length + 1, state: "BLOCKED", message: run.stopReason, createdAt: run.updatedAt }]; this.deps.store.write(run); return run;

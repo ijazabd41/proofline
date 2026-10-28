@@ -9,7 +9,7 @@ export const REPRODUCTION_DEFINITION_LIMITS = Object.freeze({
   maxTitleLength: 500, maxTextLength: 2_000, maxPathLength: 500,
 });
 
-const ROLES = ["button", "link", "textbox", "combobox", "heading", "status", "listitem", "row", "cell", "checkbox", "radio", "option", "alert"] as const;
+export const ROLES = ["button", "link", "textbox", "combobox", "heading", "status", "listitem", "row", "cell", "checkbox", "radio", "option", "alert"] as const;
 type Role = typeof ROLES[number];
 export type ReproductionLocatorContext = { kind: "product"; productId: number };
 

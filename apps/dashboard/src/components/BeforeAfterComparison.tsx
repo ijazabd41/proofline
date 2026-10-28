@@ -5,9 +5,10 @@ import { EvidencePanel } from "./EvidencePanel";
 interface BeforeAfterComparisonProps {
   evidence: Evidence[];
   verification?: Verification | null;
+  candidate?: boolean;
 }
 
-export function BeforeAfterComparison({ evidence, verification }: BeforeAfterComparisonProps) {
+export function BeforeAfterComparison({ evidence, verification, candidate }: BeforeAfterComparisonProps) {
   const beforeRun = verification?.beforeRun ?? null;
   const afterRun = verification?.afterRun ?? null;
 
@@ -31,22 +32,21 @@ export function BeforeAfterComparison({ evidence, verification }: BeforeAfterCom
         <span style={{ color: "#64748b" }}>Legacy run — proof unavailable</span>
       );
     } else if (beforeRun.outcome === "ASSERTION_FAILED") {
-      // Test failed = bug was reproduced successfully
       beforeLabel = (
         <>
-          <span style={{ color: "#b91c1c", fontWeight: 700 }}>❌ FAILED</span>
+          <span style={{ color: "#b91c1c", fontWeight: 700 }}>BUG REPRODUCED</span>
           <span style={{ color: "#64748b", fontWeight: 400, fontSize: 12 }}>
-            {" "}— Bug reproduced
+            {" "}— baseline assertion failed as expected
           </span>
         </>
       );
       beforeBorder = "#fecaca";
     } else {
-      beforeLabel = <span style={{ color: "#15803d", fontWeight: 700 }}>✅ PASSED</span>;
-      beforeBorder = "#bbf7d0";
+      beforeLabel = <span style={{ color: "#c2410c", fontWeight: 700 }}>BUG NOT REPRODUCED</span>;
+      beforeBorder = "#fed7aa";
     }
   } else {
-    beforeLabel = <span style={{ color: "#64748b" }}>Before Patch</span>;
+    beforeLabel = <span style={{ color: "#64748b" }}>Not run</span>;
   }
 
   // Derive after-panel label from actual run data
@@ -57,9 +57,9 @@ export function BeforeAfterComparison({ evidence, verification }: BeforeAfterCom
     if (afterRun.passed) {
       afterLabel = (
         <>
-          <span style={{ color: "#15803d", fontWeight: 700 }}>✅ PASSED</span>
+          <span style={{ color: "#15803d", fontWeight: 700 }}>{verification?.status === "VERIFIED" ? "ALL GATES PASSED" : "TEST PASSED"}</span>
           <span style={{ color: "#64748b", fontWeight: 400, fontSize: 12 }}>
-            {" "}— {verification?.status === "VERIFIED" ? "Bug fixed" : "Pass recorded; verification incomplete"}
+            {" "}— {verification?.status === "VERIFIED" ? candidate ? "candidate verified" : "repair verified" : "reproduction test passed; verification gates pending"}
           </span>
         </>
       );
@@ -76,7 +76,7 @@ export function BeforeAfterComparison({ evidence, verification }: BeforeAfterCom
       afterBorder = "#fed7aa";
     }
   } else {
-    afterLabel = <span style={{ color: "#64748b" }}>After Patch</span>;
+    afterLabel = <span style={{ color: "#64748b" }}>Not run</span>;
   }
 
   return (
@@ -116,9 +116,9 @@ export function BeforeAfterComparison({ evidence, verification }: BeforeAfterCom
             color: "#0f172a",
           }}
         >
-          <span>Before Patch —</span> {beforeLabel}
+          <span>Baseline (before patch) —</span> {beforeLabel}
         </h4>
-        {hasBeforeEvidence ? (
+        {hasBeforeEvidence || beforeRun ? (
           <EvidencePanel evidence={evidence} phase="before" run={beforeRun} />
         ) : (
           <p style={{ color: "#94a3b8", fontSize: 13 }}>Evidence unavailable.</p>
@@ -147,9 +147,9 @@ export function BeforeAfterComparison({ evidence, verification }: BeforeAfterCom
             color: "#0f172a",
           }}
         >
-          <span>After Patch —</span> {afterLabel}
+          <span>Post-patch reproduction —</span> {afterLabel}
         </h4>
-        {hasAfterEvidence ? (
+        {hasAfterEvidence || afterRun ? (
           <EvidencePanel evidence={evidence} phase="after" run={afterRun} />
         ) : (
           <p style={{ color: "#94a3b8", fontSize: 13 }}>Not run yet.</p>

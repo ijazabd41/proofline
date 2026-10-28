@@ -10,6 +10,8 @@ vite.config.ts.timestamp-*
 
 # Environment — never commit real keys
 .env
+.env.*
+!.env.example
 .env.local
 .env.*.local
 
@@ -22,6 +24,9 @@ tests/playwright/artifacts/
 
 # Runtime-created report records (curated seed cases remain tracked)
 data/cases/case-[0-9][0-9][0-9][0-9]*.json
+# Retained development smoke records created before numeric runtime IDs.
+data/cases/case-b1375c822f61f02391.json
+data/cases/case-fd42401606ba7d703c.json
 
 # Keep source-controlled placeholders outside the runtime artifact tree
 !data/cases/.gitkeep

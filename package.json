@@ -2,6 +2,7 @@
   "name": "bug-to-proof",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
   "description": "Turn a bug report into reproducible, evidence-backed proof.",
   "workspaces": [
     "packages/*",
@@ -10,8 +11,11 @@
     "tests/*"
   ],
   "scripts": {
+    "demo:reference": "tsx scripts/verify-real-browser-workflow.ts",
+    "demo:dashboard": "tsx scripts/record-dashboard-demo.ts",
+    "model:compare": "tsx scripts/compare-models.ts",
     "dev": "concurrently \"npm run dev:api\" \"npm run dev:dashboard\" \"npm run dev:minishop\"",
-    "dev:api": "npx tsx services/api/src/index.ts",
+    "dev:api": "npm run dev --workspace=services/api",
     "dev:dashboard": "npm run dev --workspace=apps/dashboard",
     "dev:minishop": "npm run dev --workspace=apps/minishop",
     "test": "npm run test:unit && npm run test:playwright",
@@ -53,7 +57,7 @@
     "vitest": "^5.0.2"
   },
   "engines": {
-    "node": ">=22.0.0",
+    "node": ">=22.19.0",
     "npm": ">=9.0.0"
   }
 }

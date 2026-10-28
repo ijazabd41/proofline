@@ -19,6 +19,7 @@ const completeCase = {
   id: "case-api", title: "Cart total", description: "Wrong total",
   report: { schemaVersion: "1.0", steps: ["Add item"], expected: "$20", actual: "$10", startPath: "/", context: "" },
   reportCompleteness: { complete: true, missingFields: [] },
+  evidence: [],
 };
 
 describe("reproduction run API", () => {
@@ -100,12 +101,19 @@ describe("reproduction run API", () => {
     vi.spyOn(reproductionReviewService, "review").mockResolvedValue({ ...candidate, state: "REPRODUCED",
       targetSnapshot: { sourceFingerprint: "c".repeat(64) },
       acceptedCandidate: { frozenTestPath: "C:/accepted/run-review/reproduction.spec.ts", definitionHash: "a".repeat(64), compiledTestHash: "b".repeat(64), acceptedAt: "now", acceptedBy: "reviewer" },
-      baselineRun: { outcome: "ASSERTION_FAILED", passed: false, expected: "20", actual: "10", durationMs: 1, runAt: "now", evidenceIds: [] } } as never);
+      baselineArtifacts: { screenshot: "artifacts/reproduction-runs/run-review-accepted-baseline/evidence/screenshot.png" },
+      baselineRun: { outcome: "ASSERTION_FAILED", passed: false, expected: "20", actual: "10", durationMs: 1, runId: "confirmed", runAt: "now", evidenceIds: ["ev-confirmed-screenshot"] } } as never);
     const response = await request(app).post("/api/reproduction-runs/run-review/review").send({ decision: "APPROVE",
       definitionHash: "a".repeat(64), compiledTestHash: "b".repeat(64), acceptedBy: "reviewer" });
     expect(response.status).toBe(200); expect(response.body.state).toBe("REPRODUCED");
     expect(reproductionReviewService.review).toHaveBeenCalledWith(expect.objectContaining({ definitionHash: "a".repeat(64), compiledTestHash: "b".repeat(64), acceptedBy: "reviewer" }));
     expect(writtenCase).toMatchObject({ status: "REPRODUCED", reproduction: { testFile: "C:/accepted/run-review/reproduction.spec.ts", lastRun: { outcome: "ASSERTION_FAILED" } } });
+    expect(writtenCase.evidence).toContainEqual(expect.objectContaining({
+      id: "ev-confirmed-screenshot",
+      type: "screenshot",
+      phase: "before",
+      path: "artifacts/reproduction-runs/run-review-accepted-baseline/evidence/screenshot.png",
+    }));
   });
 
   it("rejects malformed review requests before changing durable state", async () => {

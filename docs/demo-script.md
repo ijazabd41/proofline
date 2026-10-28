@@ -1,146 +1,31 @@
-# Bug-to-Proof — Demo Script (2–3 min)
+# Bug-to-Proof reference demo
 
-> **CONFIGURED-CASE DEMO:** This script demonstrates a seeded case with a predefined reproduction test. It does not demonstrate arbitrary new bug reproduction. See the [implementation plan](../plans/arbitrary-bug-reproduction-plan.md).
+Bug-to-Proof is the engineering project; **Proofline** is its dashboard. This configured-case demo uses a predefined Playwright test and a deterministic repair proposal. Browser execution, regression checks, and ZIP extraction are real. The script submits approval automatically for demonstration; this is not independent human review or live-model repair.
 
-> **Audience:** judges / technical reviewers  
-> **Goal:** show the full loop from raw bug report to machine-verified fix in one live session  
-> **Prereqs (already running):** MiniShop on `http://localhost:5174`, API on `http://localhost:3001`, Dashboard on `http://localhost:5173`
+## Run locally
 
----
+Install Node.js 22+, run `npm install`, and install Chromium with `npx playwright install chromium`. From the repository root:
 
-## 0 · Reset to clean demo state (15 s)
-
-Open a terminal and run:
-
-```bash
-curl -s -X POST http://localhost:3001/api/demo/reset | jq .status
-# expected: "REPRODUCED"
+```sh
+npm run demo:reference
 ```
 
-> This restores `case-001` to the seeded `REPRODUCED` state with the buggy code and a pre-recorded failing test run already attached.
+No provider key or running dashboard is needed. The runner creates an isolated MiniShop workspace, seeds the first-item-only total defect there, starts its own local server, and executes the case-001 test before proposing a patch. It leaves the main MiniShop source unchanged.
 
----
+Success requires `ASSERTION_FAILED` before the patch, `PASSED` afterward, identical test fingerprints, passing typecheck/build/unit checks, and independently validated bundle entries. An environment error is not a reproduced bug.
 
-## 1 · Show the bug live (30 s)
+The result is saved in `artifacts/system-testing/real-browser-verification/browser-workflow-result.json`; the run directory contains screenshots, traces, logs, and the proof ZIP. Raw files remain Git-ignored.
 
-Open **http://localhost:5174** in a browser.
+## Recording sequence (about one minute)
 
-1. Click **Add to Cart** on **Keyboard ($10.00)**.
-2. Click **Add to Cart** on **Mouse Pad ($20.00)**.
-3. Point at the cart sidebar — **Total shows `$10.00`** instead of `$30.00`.
+1. **Problem:** Adding a $10 Keyboard and $20 Mouse Pad should show $30. The seeded defect shows $10. Show the captured baseline screenshot.
+2. **Patch review:** Show the one-line reduction over price times quantity. Explain that the proposal is deterministic and approval is scripted.
+3. **Verification:** Show the post-patch screenshot and identical test identity. The same test now passes.
+4. **Evidence:** Show the actual regression results and ZIP digest validation. The output can be inspected outside the dashboard.
+5. **Boundary:** This proves the configured MiniShop reference workflow. Separate live generation evaluation achieved 10/12 reviewed report matches; live-model repair remains unverified.
 
-> The bug: `cartStore.total()` reads `items[0].price` and ignores every other item.
+The shareable video is an edited walkthrough of recorded browser evidence, not continuous screen capture. See [the evidence example](evidence/portfolio-reference.md) for its exact source run and date.
 
----
+## Hosted verification
 
-## 2 · Inspect the reproduced evidence (20 s)
-
-```bash
-curl -s http://localhost:3001/api/cases/case-001 | jq '{status, rootCauseExplanation}'
-```
-
-Show in the dashboard:
-- Status badge: **REPRODUCED**
-- Root-cause paragraph (LLM-generated)
-- Before-phase screenshot at `http://localhost:3001/artifacts/case-001/before/screenshot.png` showing `$10.00`
-
----
-
-## 3 · Propose and apply the patch (20 s)
-
-Advance the case through the state machine:
-
-```bash
-# REPRODUCED → PATCH_PROPOSED
-curl -s -X PATCH http://localhost:3001/api/cases/case-001 \
-  -H 'Content-Type: application/json' \
-  -d '{"status":"PATCH_PROPOSED"}' | jq .status
-
-# PATCH_PROPOSED → PATCH_APPLIED
-curl -s -X PATCH http://localhost:3001/api/cases/case-001 \
-  -H 'Content-Type: application/json' \
-  -d '{"status":"PATCH_APPLIED","patch":{"status":"APPLIED","appliedAt":"'"$(date -u +%FT%TZ)"'"}}' \
-  | jq '{status, "patch.status": .patch.status}'
-```
-
-Point at the diff in the dashboard — one line changed:
-
-```diff
-- total: () => get().items[0]?.price ?? 0,
-+ total: () => get().items.reduce((sum, item) => sum + item.price * item.quantity, 0),
-```
-
----
-
-## 4 · Trigger verification and watch it pass (30 s)
-
-```bash
-curl -s -X POST http://localhost:3001/api/cases/case-001/verify | jq .message
-# "Verification started"
-```
-
-Poll until done (≈5 s):
-
-```bash
-watch -n2 'curl -s http://localhost:3001/api/cases/case-001 | jq "{status, verified: .verification.status}"'
-```
-
-Expected final output:
-
-```json
-{
-  "status": "VERIFIED",
-  "verified": "VERIFIED"
-}
-```
-
-Refresh the browser at **http://localhost:5174** — cart now shows **`$30.00`**.
-
----
-
-## 5 · Show the after evidence (15 s)
-
-```bash
-curl -s http://localhost:3001/api/cases/case-001 | jq '
-  .verification | {
-    beforeStatus: .comparison.beforeStatus,
-    afterStatus:  .comparison.afterStatus,
-    changed:      .comparison.statusChanged
-  }'
-```
-
-Expected:
-```json
-{
-  "beforeStatus": "FAILED",
-  "afterStatus":  "PASSED",
-  "changed":      true
-}
-```
-
-Open after-phase screenshot at `http://localhost:3001/artifacts/case-001/after/screenshot.png` — shows **`$30.00`**.
-
----
-
-## Summary
-
-| Step | State | Evidence |
-|------|-------|----------|
-| Bug reported | `REPRODUCED` | before screenshot · trace · result.json |
-| Patch proposed | `PATCH_PROPOSED` | unified diff in case JSON |
-| Patch applied | `PATCH_APPLIED` | `appliedAt` timestamp recorded |
-| Verification run | `VERIFIED` | after screenshot · 2/2 Playwright tests pass |
-| Comparison | `FAILED → PASSED` | `statusChanged: true` |
-
-**One 1-line fix. Two automated tests. Machine-verified before and after. No manual assertions weakened.**
-
----
-
-## Troubleshooting
-
-| Symptom | Fix |
-|---------|-----|
-| API returns 409 on `/verify` | Case is not in `PATCH_APPLIED` — re-run the reset + steps 3 |
-| MiniShop shows stale total | Hard-refresh the browser (Ctrl+Shift+R) |
-| Playwright times out | Ensure MiniShop is running: `curl http://localhost:5174` |
-| API crashes mid-run | Restart: `node node_modules/tsx/dist/cli.mjs services/api/src/index.ts` |
+CI runs on pushes and pull requests to master or main; a manual trigger is included in the local workflow changes. It checks Windows and Ubuntu. Publish reviewed changes with a writable GitHub account before using the manual trigger. A local pass is not a hosted CI pass.

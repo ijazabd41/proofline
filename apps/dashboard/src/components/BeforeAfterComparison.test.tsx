@@ -19,5 +19,12 @@ describe("evidence labels", () => {
     const verification: Verification = { status: "PENDING", beforeRun: null, afterRun: run("PASSED", true), comparison: null };
     render(<BeforeAfterComparison evidence={[]} verification={verification} />);
     expect(screen.queryByText(/Bug fixed/)).toBeNull();
+    expect(screen.getByText(/reproduction test passed; verification gates pending/i)).toBeDefined();
+  }, 15000);
+  it("uses evidence-phase names instead of ambiguous before and after labels", () => {
+    const verification: Verification = { status: "PENDING", beforeRun: run("ASSERTION_FAILED", false), afterRun: null, comparison: null };
+    render(<BeforeAfterComparison evidence={[]} verification={verification} />);
+    expect(screen.getByText(/Baseline \(before patch\)/i)).toBeDefined();
+    expect(screen.getByText(/Post-patch reproduction/i)).toBeDefined();
   }, 15000);
 });

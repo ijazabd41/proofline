@@ -17,6 +17,18 @@ const reports = ["cart total", "cart removal", "checkout navigation"].map(title 
 
 afterEach(() => dirs.splice(0).forEach(dir => fs.rmSync(dir, { recursive: true, force: true })));
 describe("bounded reproduction service", () => {
+  it("executes optional wire nulls while retaining the exact provider response", async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "btp-wire-")); dirs.push(root);
+    const raw = JSON.stringify({ ...definition, steps: definition.steps.map(step => ({ ...step, within: null })) }, null, 2);
+    const execute = vi.fn(async () => ({ outcome: "ASSERTION_FAILED" as const, passed: false, expected: "/cart", actual: "/", durationMs: 1,
+      runId: "e", testFingerprint: "fp", testIds: ["generated"], artifactPaths: {}, rawOutput: "BTP_ASSERTION" }));
+    const service = new ReproductionService({ store: new ReproductionRunStore(path.join(root, "records")), generatedRoot: path.join(root, "generated"),
+      discover: async () => discovery, generate: async () => ({ raw, provider: "ollama", model: "fixture" }), execute });
+    const result = await service.run({ caseId: "wire", report: reports[0], targetUrl: "http://localhost:5174" });
+    expect(result.state).toBe("AWAITING_TEST_REVIEW"); expect(execute).toHaveBeenCalledOnce();
+    const artifact = result.attempts[0].artifactPaths.find(item => item.endsWith("model-output.txt"))!;
+    expect(fs.readFileSync(path.join(root, "generated", artifact), "utf8")).toBe(raw);
+  });
   it("produces reviewable candidates for three reports without reference-test context", async () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "btp-service-")); dirs.push(root);
     const generate = vi.fn(async () => ({ raw: JSON.stringify(definition), provider: "fake", model: "fixture", usage: undefined }));

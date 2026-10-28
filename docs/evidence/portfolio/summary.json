@@ -1,0 +1,35 @@
+{
+  "schemaVersion": "1.0",
+  "sourceRunId": "run-7157c831-a0eb-4c38-8d4f-53927ee0a9d7",
+  "sourceRecordedAt": "2026-10-22T11:44:33.287Z",
+  "packagedAt": "2026-10-22T11:45:20.588Z",
+  "target": "Configured local MiniShop",
+  "proposalMode": "deterministic reference",
+  "approvalMode": "scripted reference approval",
+  "baselineOutcome": "ASSERTION_FAILED",
+  "postPatchOutcome": "PASSED",
+  "testFingerprint": "6b1701cce02f50cc045066ad826d901147bf6ab12087b39f3a13ecfcad64af32",
+  "sameTest": true,
+  "baselineReportHash": "514f48a180f4bdd5e3c98452c3a2dda70a8c751e403551884cacee20f0874594",
+  "postPatchReportHash": "1a866734e54698358b9bd297ea4afdd7551b0590f11d184732ea5a7ae0f0b43b",
+  "checks": [
+    {
+      "type": "typecheck",
+      "passed": true,
+      "exitCode": 0
+    },
+    {
+      "type": "build",
+      "passed": true,
+      "exitCode": 0
+    },
+    {
+      "type": "unit-tests",
+      "passed": true,
+      "exitCode": 0
+    }
+  ],
+  "proofZipSha256": "9bcbfcc260f6297f24abe0d802e9530687c9c7a62f39bd8da01ba221b8e4285f",
+  "validatedPayloadFiles": 31,
+  "limitation": "Configured-case reference recorded on sourceRecordedAt; scripted approval is not independent human acceptance or live-model repair. Public subset omits the raw ZIP and cannot independently reconstruct the complete run."
+}

@@ -272,6 +272,7 @@ describe("LangGraph Dynamic Repair Orchestrator (repairGraph)", () => {
         testFingerprint: realFp,
         config: {
           mode: "simulated",
+          timeoutMs: 10_000,
           seedDefects: [
             {
               relativePath: "src/store/cartStore.ts",
@@ -292,6 +293,10 @@ describe("LangGraph Dynamic Repair Orchestrator (repairGraph)", () => {
     );
 
     expect(paused.state).toBe("AWAITING_REVIEW");
+    await graph.updateState(
+      { configurable: { thread_id: runId } },
+      { deadlineMs: 1 }
+    );
 
     // 2. Submit approval review
     const review: ProposalReview = {
@@ -308,6 +313,7 @@ describe("LangGraph Dynamic Repair Orchestrator (repairGraph)", () => {
     );
 
     expect(finalized.state).toBe("VERIFIED");
+    expect(finalized.deadlineMs).toBeGreaterThan(Date.now());
     expect(finalized.requiredChecks.length).toBe(3);
     expect(finalized.requiredChecks.every((c: RequiredCheckResult) => c.passed)).toBe(true);
 
@@ -519,6 +525,11 @@ describe("LangGraph Dynamic Repair Orchestrator (repairGraph)", () => {
     expect(run2.diagnostics.length).toBeGreaterThan(0);
     expect(run2.attempts.length).toBe(2);
     expect(run2.attempts[0].state).toBe("VERIFICATION_FAILED");
+    expect(run2.postPatchRun).toBeNull();
+    expect(run2.requiredChecks).toEqual([]);
+    const retryRecord = getRunRecord(runId);
+    expect(retryRecord?.postPatchRun).toBeUndefined();
+    expect(retryRecord?.requiredChecks).toEqual([]);
 
     // Approve attempt 2 (regression checks pass -> completes VERIFIED)
     const runVerified = await graph.invoke(

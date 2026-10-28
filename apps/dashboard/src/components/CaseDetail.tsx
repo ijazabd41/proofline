@@ -5,6 +5,8 @@ import { StatusBadge } from "./StatusBadge";
 import { PatchViewer } from "./PatchViewer";
 import { BeforeAfterComparison } from "./BeforeAfterComparison";
 import { AIAssistant } from "./AIAssistant";
+import type { RepairRun } from "./AIAssistant";
+import { RepairProgress } from "./RepairProgress";
 import { EvidencePanel } from "./EvidencePanel";
 import { Workflow } from "./Workflow";
 import { ReportClarification } from "./ReportClarification";
@@ -50,6 +52,11 @@ function reproductionDiagnostic(run: ReproductionRunRecordSummary): { message: s
 }
 
 export function CaseDetail({ bugCase, onUpdate }: CaseDetailProps) {
+  const [latestRepairRun, setLatestRepairRun] = useState<RepairRun | null>(null);
+  const activeRepair = latestRepairRun?.caseId === bugCase.id ? latestRepairRun : null;
+  const activePostPatchRun = activeRepair && !["INITIALIZING", "REPRODUCING_BASELINE", "INVESTIGATING", "PROPOSING", "AWAITING_REVIEW", "APPLYING"].includes(activeRepair.state)
+    ? activeRepair.postPatchRun ?? null
+    : null;
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [pollingError, setPollingError] = useState<string | null>(null);
@@ -71,7 +78,7 @@ export function CaseDetail({ bugCase, onUpdate }: CaseDetailProps) {
     let cancelled = false;
     setReproductionRun(null);
     setReproductionError(null);
-    if (!hasTrustedReproductionTest && bugCase.reportCompleteness?.complete) {
+    if (bugCase.reportCompleteness?.complete) {
       void api.listReproductionRuns(bugCase.id).then(runs => {
         if (!cancelled) setReproductionRun(runs?.[0] ?? null);
       }).catch(error => {
@@ -334,6 +341,7 @@ export function CaseDetail({ bugCase, onUpdate }: CaseDetailProps) {
             </p>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-end" }}>
+            {activeRepair && <span style={{ fontSize: 12, color: "#64748b" }}>Saved case status</span>}
             <StatusBadge status={bugCase.status} />
             <div style={{ display: "flex", gap: 8 }}>
               <button
@@ -395,14 +403,20 @@ export function CaseDetail({ bugCase, onUpdate }: CaseDetailProps) {
         )}
       </div>
 
-      <Workflow status={bugCase.status} />
+      <Workflow status={bugCase.status} repairState={activeRepair?.state} />
+      {activeRepair && <RepairProgress run={activeRepair} submittingApproval={false} />}
 
       <div className="case-layout">
       <div className="case-content">
       <section className="panel verification-overview" aria-labelledby="verification-heading">
-        <div className="panel-heading"><div><span className="eyebrow">THE EVIDENCE</span><h3 id="verification-heading">Before / After Comparison</h3></div></div>
-        <p className="panel-description">Recorded results from the original and patched application.</p>
-        <BeforeAfterComparison evidence={bugCase.evidence} verification={bugCase.verification} />
+        <div className="panel-heading"><div><span className="eyebrow">THE EVIDENCE</span><h3 id="verification-heading">Baseline / Post-Patch Evidence</h3></div></div>
+        <p className="panel-description">{activeRepair ? "Evidence for the current repair attempt in its isolated workspace. A passing post-patch test is not a verified repair until every required check passes." : "Baseline evidence from the original application and verification evidence from the patched application."}</p>
+        <BeforeAfterComparison candidate={!!activeRepair} evidence={activeRepair ? [] : bugCase.evidence} verification={activeRepair ? {
+          status: activeRepair.state === "VERIFIED" ? "VERIFIED" : "PENDING",
+          beforeRun: activeRepair.baselineRun ?? null,
+          afterRun: activePostPatchRun,
+          comparison: null,
+        } : bugCase.verification} />
       </section>
 
       {/* ── Errors ── */}
@@ -622,7 +636,8 @@ export function CaseDetail({ bugCase, onUpdate }: CaseDetailProps) {
                   {displayedReproduction.lastRun.passed ? "✅ PASSED" : "❌ FAILED"} —{" "}
                   {displayedReproduction.lastRun.durationMs}ms at{" "}
                   {new Date(displayedReproduction.lastRun.runAt).toLocaleString()}
-                  {displayedReproduction.lastRun.outcome === "ASSERTION_FAILED" && (
+                  {/<missing(?:-or-ambiguous)?>/.test(displayedReproduction.lastRun.actual ?? "") && <p role="alert">Configured test has missing page targets. Regenerate and review its replacement before starting another repair.</p>}
+                  {displayedReproduction.lastRun.outcome === "ASSERTION_FAILED" && !/<missing(?:-or-ambiguous)?>/.test(displayedReproduction.lastRun.actual ?? "") && (
                     <p style={{ marginTop: 4, fontSize: 12, color: "#6b7280" }}>
                       Bug reproduced — baseline test failed as expected.
                     </p>
@@ -641,7 +656,7 @@ export function CaseDetail({ bugCase, onUpdate }: CaseDetailProps) {
             </p>
           )}
 
-          {!hasTrustedReproductionTest && (
+          {(!hasTrustedReproductionTest || bugCase.reportCompleteness?.complete) && (
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {bugCase.reportCompleteness && !bugCase.reportCompleteness.complete ? (
                 <>
@@ -707,7 +722,7 @@ export function CaseDetail({ bugCase, onUpdate }: CaseDetailProps) {
                       onClick={handleStartReproduction}
                       style={btnStyle("#2563eb", reproductionLoading)}
                     >
-                      {reproductionLoading ? "Starting…" : reproductionRun?.state === "BLOCKED" ? "↺ Retry generation" : "▶ Generate Reproduction"}
+                      {reproductionLoading ? "Starting…" : hasTrustedReproductionTest ? "↺ Regenerate reproduction" : reproductionRun?.state === "BLOCKED" ? "↺ Retry generation" : "▶ Generate Reproduction"}
                     </button>
                   )}
                 </>
@@ -782,7 +797,7 @@ export function CaseDetail({ bugCase, onUpdate }: CaseDetailProps) {
             <EvidencePanel
               evidence={bugCase.evidence}
               phase="before"
-              title="Before Evidence"
+              title="Baseline Evidence (before patch)"
               run={bugCase.reproduction?.lastRun ?? null}
             />
           )}
@@ -941,7 +956,7 @@ export function CaseDetail({ bugCase, onUpdate }: CaseDetailProps) {
         : null}
 
       </div>
-      <AIAssistant key={bugCase.id} caseId={bugCase.id} onComplete={handleRefresh} />
+      <AIAssistant key={bugCase.id} caseId={bugCase.id} onComplete={handleRefresh} onRunChange={setLatestRepairRun} />
       </div>
     </div>
   );

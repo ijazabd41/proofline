@@ -1,4 +1,6 @@
-# Current Project Status: Bug-to-Proof
+# Current Project Status: Proofline
+
+Proofline is the product name; `bug-to-proof` remains the repository/package identifier. Historical evidence retains the names recorded at execution time.
 
 **Platform**: Windows x64 & Ubuntu Linux (Node.js >= 22.0.0)  
 **Verification Date**: October 2026  

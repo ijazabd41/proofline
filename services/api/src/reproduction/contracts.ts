@@ -1,4 +1,5 @@
 import type { TestRun } from "@bug-to-proof/shared-types";
+import type { RunResult } from "../runner/playwrightRunner";
 
 export const REPRODUCTION_RUN_STATES = [
   "NEEDS_REPORT_DETAILS",
@@ -93,6 +94,7 @@ export interface ReproductionAttempt {
   diagnostics?: string;
   validationFindings?: readonly string[];
   usage?: { inputTokens?: number; outputTokens?: number; costUsd?: number };
+  timings?: import("../llm/client").LLMTimings;
   durationMs?: number;
   artifactPaths: readonly string[];
 }
@@ -140,6 +142,8 @@ export interface ReproductionRunRecord {
   acceptedCandidate?: AcceptedReproductionCandidate;
   review?: ReproductionCandidateReview;
   baselineRun?: TestRun;
+  /** Evidence produced by the frozen, reviewer-approved baseline confirmation. */
+  baselineArtifacts?: RunResult["artifactPaths"];
   events: readonly ReproductionEvent[];
   limits: ReproductionLimits;
   stopReason?: string;

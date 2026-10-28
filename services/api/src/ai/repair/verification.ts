@@ -121,7 +121,7 @@ export function executeCheck(options: CheckExecutionOptions): Promise<{
 export async function runRequiredChecks(
   minishopDir: string,
   runArtifactDir: string,
-  options?: { runId?: string; abortSignal?: AbortSignal }
+  options?: { runId?: string; abortSignal?: AbortSignal; timeoutMs?: number }
 ): Promise<RequiredCheckResult[]> {
   if (options?.abortSignal?.aborted) {
     throw new Error("Regression checks aborted by signal");
@@ -147,7 +147,7 @@ export async function runRequiredChecks(
     cwd: WORKSPACE_ROOT,
     command: process.execPath,
     args: [tscCli, "--project", minishopTsConfig, "--noEmit"],
-    timeoutMs: 30_000,
+    timeoutMs: options?.timeoutMs ?? 30_000,
     runId: options?.runId,
     abortSignal: options?.abortSignal,
   });
@@ -176,7 +176,7 @@ export async function runRequiredChecks(
     cwd: WORKSPACE_ROOT,
     command: process.execPath,
     args: [viteCli, "build", minishopDir, "--config", minishopViteConfig],
-    timeoutMs: 45_000,
+    timeoutMs: options?.timeoutMs ?? 45_000,
     runId: options?.runId,
     abortSignal: options?.abortSignal,
   });
@@ -205,7 +205,7 @@ export async function runRequiredChecks(
     cwd: minishopDir,
     command: process.execPath,
     args: [vitestCli, "run", "--no-file-parallelism"],
-    timeoutMs: 45_000,
+    timeoutMs: options?.timeoutMs ?? 45_000,
     runId: options?.runId,
     abortSignal: options?.abortSignal,
   });

@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { API_BASE, artifactUrl } from "../api/client";
+import { RepairProgress, needsReproductionAttention } from "./RepairProgress";
+import type { TestRun } from "../types";
 
 interface Answer {
   answer: string;
@@ -30,13 +32,16 @@ interface RequiredCheck {
   artifactPath?: string;
 }
 
-interface RepairRun {
+export interface RepairRun {
   runId: string;
   caseId: string;
   mode: "dynamic" | "simulated";
   state: string;
   attempt?: number;
   maxAttempts?: number;
+  attempts?: { attemptNumber: number; state: string; failureReason?: string }[];
+  baselineRun?: TestRun;
+  postPatchRun?: TestRun;
   diagnostics?: string[];
   originalSourceFingerprint: string;
   proposal?: {
@@ -65,17 +70,22 @@ export function isTerminalState(state?: string): boolean {
   return ["AWAITING_REVIEW", "VERIFIED", "BLOCKED", "CANCELLED", "REJECTED", "VERIFICATION_FAILED"].includes(state);
 }
 
-export function AIAssistant({ caseId, onComplete }: { caseId: string; onComplete: () => Promise<void> }) {
+export function AIAssistant({ caseId, onComplete, onRunChange }: { caseId: string; onComplete: () => Promise<void>; onRunChange?: (run: RepairRun | null) => void }) {
   const [question, setQuestion] = useState("Why does the cart total show only the first item's price?");
   const [questionScope, setQuestionScope] = useState<"source" | "documentation">("source");
   const [answer, setAnswer] = useState<Answer | null>(null);
   const [report, setReport] = useState<DebugReport | null>(null);
   const [repairRun, setRepairRun] = useState<RepairRun | null>(null);
   const [busy, setBusy] = useState(false);
+  const [reviewing, setReviewing] = useState<"APPROVED" | "REJECTED" | null>(null);
   const [error, setError] = useState("");
   const [status, setStatus] = useState<{ semantic: boolean; embeddingProvider: string; chunks: number } | null>(null);
 
   const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    onRunChange?.(repairRun?.caseId === caseId ? repairRun : null);
+  }, [repairRun, caseId, onRunChange]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -117,7 +127,7 @@ export function AIAssistant({ caseId, onComplete }: { caseId: string; onComplete
 
   // Bounded polling for active running repair state with unmount cleanup
   useEffect(() => {
-    if (!repairRun || isTerminalState(repairRun.state)) {
+    if (!repairRun || (isTerminalState(repairRun.state) && !(reviewing === "APPROVED" && repairRun.state === "AWAITING_REVIEW"))) {
       return;
     }
 
@@ -130,7 +140,7 @@ export function AIAssistant({ caseId, onComplete }: { caseId: string; onComplete
         if (res.ok && isMountedRef.current) {
           const data: RepairRun = await res.json();
           setRepairRun(data);
-          if (isTerminalState(data.state)) {
+          if (isTerminalState(data.state) && data.state !== "AWAITING_REVIEW") {
             await onComplete();
           }
         }
@@ -143,7 +153,7 @@ export function AIAssistant({ caseId, onComplete }: { caseId: string; onComplete
       clearInterval(intervalId);
       controller.abort();
     };
-  }, [repairRun?.runId, repairRun?.state, onComplete]);
+  }, [repairRun?.runId, repairRun?.state, reviewing, onComplete]);
 
   async function run(url: string, body: unknown, debug = false) {
     setBusy(true);
@@ -230,6 +240,7 @@ export function AIAssistant({ caseId, onComplete }: { caseId: string; onComplete
   async function reviewProposal(decision: "APPROVED" | "REJECTED") {
     if (!repairRun?.proposal) return;
     setBusy(true);
+    setReviewing(decision);
     setError("");
     try {
       const res = await fetch(`${API_BASE}/api/ai/repair-runs/${repairRun.runId}/review`, {
@@ -253,12 +264,14 @@ export function AIAssistant({ caseId, onComplete }: { caseId: string; onComplete
       }
     } finally {
       if (isMountedRef.current) {
+        setReviewing(null);
         setBusy(false);
       }
     }
   }
 
   const isRunning = Boolean(repairRun && !isTerminalState(repairRun.state));
+  const hasActiveRun = isRunning || repairRun?.state === "AWAITING_REVIEW";
 
   return (
     <section className="panel repair-assistant" style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: 20 }}>
@@ -279,7 +292,7 @@ export function AIAssistant({ caseId, onComplete }: { caseId: string; onComplete
         </p>
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
           <button
-            disabled={busy || isRunning}
+            disabled={busy || hasActiveRun}
             onClick={startDynamicRepair}
             style={{
               background: "#087f83",
@@ -291,9 +304,9 @@ export function AIAssistant({ caseId, onComplete }: { caseId: string; onComplete
               fontWeight: 600,
             }}
           >
-            {isRunning ? "Repair Workflow In Progress…" : busy ? "Starting repair…" : "Start Dynamic AI Repair Run"}
+            {repairRun?.state === "AWAITING_REVIEW" ? "Waiting for patch review" : isRunning ? "Repair Workflow In Progress…" : busy ? "Starting repair…" : "Start Dynamic AI Repair Run"}
           </button>
-          {isRunning && (
+          {hasActiveRun && (
             <button
               disabled={busy}
               onClick={cancelRepairRunAction}
@@ -351,21 +364,22 @@ export function AIAssistant({ caseId, onComplete }: { caseId: string; onComplete
             </div>
           </div>
 
+          <RepairProgress run={repairRun} submittingApproval={reviewing === "APPROVED"} />
+
           {repairRun.diagnostics && repairRun.diagnostics.length > 0 && (
-            <div style={{ marginTop: 8, marginBottom: 8, padding: "8px 12px", background: "#fef3c7", border: "1px solid #fde68a", borderRadius: 4 }}>
-              <strong style={{ fontSize: 12, color: "#92400e" }}>Previous Attempt Diagnostics & Feedback:</strong>
+            <details style={{ marginTop: 8, marginBottom: 8 }}>
+              <summary>Technical diagnostics</summary>
               <ul style={{ margin: "4px 0 0 0", paddingLeft: 20, fontSize: 12, color: "#78350f" }}>
-                {repairRun.diagnostics.map((diag, i) => (
+                {[...new Set(repairRun.diagnostics)].map((diag, i) => (
                   <li key={i}>{diag}</li>
                 ))}
               </ul>
-            </div>
+            </details>
           )}
 
           {repairRun.stopReason && (
-            <p style={{ fontSize: 13, color: "#334155", background: "#f1f5f9", padding: 8, borderRadius: 4 }}>
-              {repairRun.stopReason}
-            </p>
+            needsReproductionAttention(repairRun) ? <details><summary>Execution details</summary><p style={{ overflowWrap: "anywhere" }}>{repairRun.stopReason}</p></details>
+              : <p style={{ fontSize: 13, color: "#334155", background: "#f1f5f9", padding: 8, borderRadius: 4 }}>{repairRun.stopReason}</p>
           )}
 
           {repairRun.baselineArtifacts && (
@@ -420,7 +434,7 @@ export function AIAssistant({ caseId, onComplete }: { caseId: string; onComplete
               {repairRun.state === "AWAITING_REVIEW" && (
                 <div style={{ display: "flex", gap: 12, marginTop: 12 }}>
                   <button
-                    disabled={busy}
+                    disabled={busy || needsReproductionAttention(repairRun)}
                     onClick={() => reviewProposal("APPROVED")}
                     style={{
                       background: "#16a34a",
@@ -454,7 +468,7 @@ export function AIAssistant({ caseId, onComplete }: { caseId: string; onComplete
           )}
 
           {/* Required Regression Checks Breakdown */}
-          {repairRun.requiredChecks.length > 0 && (
+          {repairRun.requiredChecks.length > 0 && ["RUNNING_CHECKS", "VERIFIED", "VERIFICATION_FAILED", "BLOCKED"].includes(repairRun.state) && (
             <div style={{ marginTop: 16 }}>
               <h5>Independent Verification Checks</h5>
               <div style={{ display: "grid", gap: 8, marginTop: 8 }}>
@@ -464,16 +478,16 @@ export function AIAssistant({ caseId, onComplete }: { caseId: string; onComplete
                     style={{
                       display: "flex",
                       justifyContent: "space-between",
-                      alignItems: "center",
+                      alignItems: "center", flexWrap: "wrap", gap: 8, minWidth: 0,
                       padding: "8px 12px",
                       borderRadius: 4,
                       background: check.passed ? "#f0fdf4" : "#fef2f2",
                       border: `1px solid ${check.passed ? "#bbf7d0" : "#fecaca"}`,
                     }}
                   >
-                    <div>
+                    <div style={{ minWidth: 0, flex: "1 1 220px" }}>
                       <strong style={{ fontSize: 13 }}>{check.name}</strong>
-                      <span style={{ fontSize: 11, color: "#64748b", marginLeft: 8 }}>({check.command})</span>
+                      <details style={{ fontSize: 11, color: "#64748b" }}><summary>Command details</summary><code style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{check.command}</code></details>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <span style={{ fontSize: 11, color: "#64748b" }}>{check.durationMs}ms</span>

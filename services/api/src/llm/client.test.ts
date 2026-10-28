@@ -1,7 +1,23 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { callLLM, callLLMWithDiagnostics } from './client';
+import { createServer } from 'node:http';
 
 describe('LLM Client', () => {
+  it('executes a real HTTP request with a deadline beyond five minutes', async () => {
+    let requests = 0;
+    const server = createServer((request, response) => {
+      requests++; request.resume();
+      response.setHeader('Content-Type', 'application/json');
+      response.end(JSON.stringify({ message: { content: '{}' }, prompt_eval_count: 2, eval_count: 1 }));
+    });
+    await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+    try {
+      const port = (server.address() as import('node:net').AddressInfo).port;
+      const result = await callLLMWithDiagnostics('slow local', 600_000, undefined, 128, { apiUrl: `http://127.0.0.1:${port}`, model: 'local', protocol: 'ollama' });
+      expect(result.content).toBe('{}'); expect(requests).toBe(1);
+      expect(result.usage).toEqual({ inputTokens: 2, outputTokens: 1, totalTokens: 3 });
+    } finally { await new Promise<void>(resolve => server.close(() => resolve())); }
+  });
   const originalEnv = process.env;
 
   beforeEach(() => {

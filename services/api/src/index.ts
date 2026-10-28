@@ -128,7 +128,9 @@ export function isAllowedArtifactPath(relativePath: string): boolean {
 }
 
 app.use("/artifacts", (req, res, _next) => {
-  const rawPath = req.originalUrl.replace(/^\/artifacts/, "");
+  const queryIndex = req.originalUrl.indexOf("?");
+  const originalPath = queryIndex === -1 ? req.originalUrl : req.originalUrl.slice(0, queryIndex);
+  const rawPath = originalPath.replace(/^\/artifacts/, "");
   let decoded: string;
   try {
     decoded = decodeURIComponent(rawPath);

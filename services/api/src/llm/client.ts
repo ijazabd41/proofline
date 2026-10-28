@@ -1,3 +1,5 @@
+import { Agent, fetch as dispatcherFetch } from "undici";
+
 /**
  * LLM client for OpenAI-compatible and local Ollama chat completions.
  *
@@ -12,8 +14,27 @@
  * Call the configured LLM with a prompt string.
  * Returns empty string if LLM is disabled, key is missing, call fails, or is aborted.
  */
-export interface LLMCallResult { content: string; responseShape: string; requestAttempts?: number; httpStatus?: number }
-export interface ChatEndpointConfig { apiUrl: string; apiKey?: string; model: string; protocol: "openai" | "ollama" }
+export interface LLMUsage { inputTokens?: number; outputTokens?: number; totalTokens?: number }
+export interface LLMTimings { totalMs?: number; loadMs?: number; promptEvalMs?: number; evalMs?: number }
+export interface LLMCallResult { content: string; responseShape: string; requestAttempts?: number; httpStatus?: number; usage?: LLMUsage; timings?: LLMTimings }
+export interface ChatEndpointConfig { apiUrl: string; apiKey?: string; model: string; protocol: "openai" | "ollama"; contextTokens?: number; jsonMode?: boolean; schema?: Record<string, unknown> }
+
+// Numeric allowlist only: never retain arbitrary response fields or credentials.
+function measurements(body: unknown, protocol: "openai" | "ollama"): Pick<LLMCallResult, "usage" | "timings"> {
+  if (!body || typeof body !== "object" || Array.isArray(body)) return {};
+  const data = body as Record<string, any>;
+  const count = (value: unknown) => typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : undefined;
+  const inputTokens = count(protocol === "ollama" ? data.prompt_eval_count : data.usage?.prompt_tokens);
+  const outputTokens = count(protocol === "ollama" ? data.eval_count : data.usage?.completion_tokens);
+  const totalTokens = protocol === "openai" ? count(data.usage?.total_tokens) : inputTokens !== undefined && outputTokens !== undefined ? count(inputTokens + outputTokens) : undefined;
+  const usage = Object.fromEntries(Object.entries({ inputTokens, outputTokens, totalTokens }).filter(([, value]) => value !== undefined));
+  const timings: LLMTimings = {};
+  if (protocol === "ollama") for (const [field, target] of [["total_duration", "totalMs"], ["load_duration", "loadMs"], ["prompt_eval_duration", "promptEvalMs"], ["eval_duration", "evalMs"]] as const) {
+    const value = count(data[field]);
+    if (value !== undefined) timings[target] = value / 1e6;
+  }
+  return { ...(Object.keys(usage).length ? { usage } : {}), ...(Object.keys(timings).length ? { timings } : {}) };
+}
 
 export const MAX_REQUEST_ATTEMPTS = 3;
 const isRetryableStatus = (status: number) => status === 429 || (status >= 500 && status <= 599);
@@ -86,6 +107,10 @@ export async function callLLMWithDiagnostics(
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
+  // Node fetch otherwise applies a five-minute headers timeout even when the
+  // caller explicitly permits slower CPU inference. The signal remains the
+  // single overall deadline across all requests and response-body reads.
+  const dispatcher = timeoutMs > 300_000 ? new Agent({ headersTimeout: timeoutMs + 1_000, bodyTimeout: timeoutMs + 1_000 }) : undefined;
 
   let abortListener: (() => void) | undefined;
   if (abortSignal) {
@@ -100,14 +125,18 @@ export async function callLLMWithDiagnostics(
       requestAttempts = attempt;
       let response: Response;
       try {
-        response = await fetch(`${apiUrl.replace(/\/$/, "")}${protocol === "ollama" ? "/api/chat" : "/chat/completions"}`, {
+        // Keep the dispatcher and fetch implementation from the same package:
+        // Node's bundled fetch can use a different dispatcher interface version.
+        const request = dispatcher ? dispatcherFetch as unknown as typeof fetch : fetch;
+        response = await request(`${apiUrl.replace(/\/$/, "")}${protocol === "ollama" ? "/api/chat" : "/chat/completions"}`, {
           method: "POST",
           headers: { "Content-Type": "application/json", ...(protocol === "openai" ? { Authorization: `Bearer ${apiKey}` } : {}) },
           body: JSON.stringify(protocol === "ollama"
-            ? { model, messages: [{ role: "user", content: prompt }], stream: false, options: { temperature: 0, ...(maxOutputTokens === undefined ? {} : { num_predict: maxOutputTokens }) } }
-            : { model, messages: [{ role: "user", content: prompt }], temperature: endpoint ? 0 : 0.3, ...(maxOutputTokens === undefined ? {} : { max_tokens: maxOutputTokens }) }),
+            ? { model, messages: [{ role: "user", content: prompt }], stream: false, ...(endpoint?.schema ? { format: endpoint.schema } : endpoint?.jsonMode ? { format: "json" } : {}), options: { temperature: 0, ...(endpoint?.contextTokens ? { num_ctx: endpoint.contextTokens } : {}), ...(maxOutputTokens === undefined ? {} : { num_predict: maxOutputTokens }) } }
+            : { model, messages: [{ role: "user", content: prompt }], temperature: endpoint ? 0 : 0.3, ...(endpoint?.schema ? { response_format: { type: "json_schema", json_schema: { name: "bug_to_proof", strict: true, schema: endpoint.schema } } } : endpoint?.jsonMode ? { response_format: { type: "json_object" } } : {}), ...(maxOutputTokens === undefined ? {} : { max_tokens: maxOutputTokens }) }),
           signal: controller.signal,
-        });
+          ...(dispatcher ? { dispatcher } : {}),
+        } as RequestInit);
       } catch (error) {
         if (controller.signal.aborted || (error instanceof Error && error.name === "AbortError")) throw error;
         if (attempt < MAX_REQUEST_ATTEMPTS) { await abortableDelay(retryDelayMs(undefined, attempt), controller.signal); continue; }
@@ -126,13 +155,15 @@ export async function callLLMWithDiagnostics(
       try { body = await response.json(); }
       catch { return { content: "", responseShape: "response_json_invalid", requestAttempts }; }
       const result = protocol === "ollama" ? classifyOllamaResponse(body) : classifySuccessfulResponse(body);
-      return attempt === 1 ? result : { ...result, requestAttempts };
+      const measured = { ...result, ...measurements(body, protocol) };
+      return attempt === 1 ? measured : { ...measured, requestAttempts };
     }
     return { content: "", responseShape: "request_failed", requestAttempts };
   } catch (err: unknown) {
     return { content: "", responseShape: controller.signal.aborted ? abortSignal?.aborted ? "request_cancelled" : "request_timed_out" : err instanceof Error && err.name === "AbortError" ? "request_aborted_or_timed_out" : "request_failed", requestAttempts };
   } finally {
     clearTimeout(timer);
+    if (dispatcher) await dispatcher.destroy();
     if (abortSignal && abortListener) {
       abortSignal.removeEventListener("abort", abortListener);
     }

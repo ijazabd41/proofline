@@ -1,6 +1,7 @@
 name: CI
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - master
@@ -38,7 +39,7 @@ jobs:
         run: npm run typecheck
 
       - name: Unit test suite (persistence, recovery, cleanup, lifecycle)
-        run: npm run test:unit
+        run: npm run test:unit -- --maxWorkers=1 --no-file-parallelism
 
       - name: Production builds
         run: npm run build

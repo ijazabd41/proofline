@@ -1,8 +1,18 @@
-# Bug-to-Proof
+# Proofline
 
 > Turn a structured bug report into a constrained browser reproduction, a reviewed repair, and evidence that can be independently checked.
 
-Bug-to-Proof is a TypeScript/React prototype built around one question: **can an AI-assisted repair workflow prove what happened instead of merely claiming success?**
+**Proofline** is the product and dashboard name. The repository and internal npm package identifiers retain the original `bug-to-proof` name.
+
+[Watch the captioned product demo](docs/evidence/portfolio/proofline-product-demo.mp4) · [Architecture](docs/architecture.md) · [Setup](#quick-start) · [Evaluation and limitations](#verified-results)
+
+**Release review:** the [28 October portfolio preflight](docs/portfolio-preflight.md) records the latest checks and outstanding test failures. Earlier passing results below describe their recorded evaluation snapshots.
+
+Start with the [recorded reference walkthrough](demo_recording.md) and [shareable evidence example](docs/evidence/portfolio-reference.md). The walkthrough uses a deterministic repair proposal and real browser verification.
+
+Proofline is a full-stack TypeScript prototype built around one question: **can an AI-assisted repair workflow prove what happened instead of merely claiming success?**
+
+**Stack:** React, Vite, Node.js, Express, LangChain, LangGraph, Playwright, Vitest, and Ollama/OpenAI-compatible providers.
 
 For the included MiniShop application, the system discovers trusted UI targets, generates a schema-constrained Playwright candidate, pauses for hash-bound human review, records the baseline against unchanged source, verifies an isolated patch with the identical test, runs regression gates, and exports a SHA-256 manifest-backed proof bundle.
 
@@ -15,7 +25,7 @@ This is an evidence-engineering prototype, not an “any website, any bug” pro
 - **Human approval:** the reviewed definition and compiled test are frozen and bound to SHA-256 hashes.
 - **Honest lifecycle states:** only a report-relevant assertion failure on unchanged source reaches `REPRODUCED`.
 - **Same-test verification:** the exact accepted test must fail before the patch and pass afterward.
-- **Isolated repair:** proposed edits are applied in a contained workspace with path and diff validation.
+- **Isolated repair:** proposed edits are applied to a separate source copy and local app process, with path and diff validation. This shares the host environment; it is not a container or security sandbox.
 - **Fail-closed gates:** typecheck, build, tests, provenance, and proof checks must all pass.
 - **Auditable output:** proof bundles contain a versioned manifest and per-file digests.
 
@@ -62,12 +72,13 @@ The API owns lifecycle persistence, discovery, candidate validation, repair orch
 
 ## Quick start
 
-Requirements: Node.js 22+, npm 9+, and Chromium for browser verification.
+Requirements: Node.js 22.19+, npm 9+, and Chromium for browser verification.
 
 ```bash
-git clone <your-repository-url>
+git clone https://github.com/ijazabd41/bug-to-proof.git
 cd bug-to-proof
 npm install
+npx playwright install chromium
 cp .env.example .env
 npm run dev
 ```
@@ -81,6 +92,8 @@ The development command starts:
 - MiniShop: <http://localhost:5174>
 
 Provider-backed generation is optional. Configure the documented variables in your local `.env`; never commit that file.
+
+Both reproduction generation and patch proposals support local Ollama. See [local setup and recorded model comparison](docs/ollama-model-comparison.md) for generation controls, evaluation commands, and evidence boundaries.
 
 ## Usage
 
@@ -116,6 +129,8 @@ npm run arbitrary:verify
 # Inspect disposable artifact cleanup without deleting anything
 npm run artifacts:clean
 ```
+
+For a self-contained configured-case reference demo, run `npm run demo:reference`. It seeds the defect only in an isolated MiniShop workspace, uses a deterministic proposal, submits a scripted review, and records real browser and regression results. It does not contact an AI provider. See the [demo guide](docs/demo-script.md).
 
 Commands that contact an external generation provider require explicit operator authorization and are intentionally documented outside the quick-start path. Generated runtime evidence stays under `artifacts/` and is excluded from Git; the repository retains sanitized summaries under `docs/evidence/`.
 
@@ -155,4 +170,4 @@ For implementation details, historical milestones, and exact limitations, start 
 
 ## License
 
-No license has been selected yet. The source is visible for review, but reuse rights are not granted until a license is added.
+Released under the [MIT License](LICENSE).

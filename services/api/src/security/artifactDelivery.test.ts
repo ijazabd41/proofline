@@ -60,5 +60,10 @@ describe("Artifact Delivery Path Resolution & Boundary Rules", () => {
       const res = await request(app).get("/artifacts/%2e%2e%2fpackage.json");
       expect([400, 403, 404]).toContain(res.status);
     });
+
+    it("ignores cache-busting query parameters when validating an allowed artifact path", async () => {
+      const res = await request(app).get("/artifacts/case-query/before/run-123/missing.png?btp_retry=1");
+      expect(res.status).toBe(404);
+    });
   });
 });

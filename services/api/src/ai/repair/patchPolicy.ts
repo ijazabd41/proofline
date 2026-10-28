@@ -127,9 +127,12 @@ export function computeExpectedPatchedFingerprint(
   const manifest: { relativePath: string; hash: string }[] = [];
   const srcDir = path.join(minishopDir, "src");
 
-  const editsByPath = new Map<string, ProposalEdit>();
+  const editsByPath = new Map<string, ProposalEdit[]>();
   for (const edit of edits) {
-    editsByPath.set(normalizeRelativePath(edit.relativePath), edit);
+    const relativePath = normalizeRelativePath(edit.relativePath);
+    const fileEdits = editsByPath.get(relativePath) ?? [];
+    fileEdits.push(edit);
+    editsByPath.set(relativePath, fileEdits);
   }
 
   function scan(dir: string) {
@@ -145,13 +148,16 @@ export function computeExpectedPatchedFingerprint(
         const currentContent = fs.readFileSync(fullPath, "utf-8");
 
         if (editsByPath.has(normRel)) {
-          const edit = editsByPath.get(normRel)!;
-          const isCRLF = currentContent.includes("\r\n");
-          const normalizedCurrent = currentContent.replace(/\r\n/g, "\n");
-          const normalizedOld = edit.oldContent.replace(/\r\n/g, "\n");
-          const normalizedNew = edit.newContent.replace(/\r\n/g, "\n");
-          const updatedNormalized = normalizedCurrent.replace(normalizedOld, normalizedNew);
-          const finalContent = isCRLF ? updatedNormalized.replace(/\n/g, "\r\n") : updatedNormalized;
+          // Mirror the writer: every edit to a file is applied in proposal order.
+          let finalContent = currentContent;
+          for (const edit of editsByPath.get(normRel)!) {
+            const isCRLF = finalContent.includes("\r\n");
+            const normalizedCurrent = finalContent.replace(/\r\n/g, "\n");
+            const normalizedOld = edit.oldContent.replace(/\r\n/g, "\n");
+            const normalizedNew = edit.newContent.replace(/\r\n/g, "\n");
+            const updatedNormalized = normalizedCurrent.replace(normalizedOld, normalizedNew);
+            finalContent = isCRLF ? updatedNormalized.replace(/\n/g, "\r\n") : updatedNormalized;
+          }
           manifest.push({
             relativePath: rel,
             hash: digest(Buffer.from(finalContent, "utf-8")),

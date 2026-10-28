@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import type { Evidence, TestRun } from "../types";
 import { artifactUrl } from "../api/client";
 
@@ -13,13 +13,43 @@ interface EvidencePanelProps {
 export function EvidencePanel({ evidence, phase, title, run }: EvidencePanelProps) {
   const selected = phase ? evidence.filter((e) => e.phase === phase) : evidence;
   const filtered = run ? selected.filter((e) => run.evidenceIds.includes(e.id)) : selected;
-  const [imgError, setImgError] = useState(false);
+  const [imageAttempt, setImageAttempt] = useState(0);
+  const [imageState, setImageState] = useState<"loading" | "retrying" | "loaded" | "failed">("loading");
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const screenshot = filtered.find((e) => e.type === "screenshot");
   const traceItems = filtered.filter((e) => e.type === "trace");
   const otherItems = filtered.filter((e) => e.type !== "screenshot" && e.type !== "trace");
 
-  if (filtered.length === 0) {
+  useEffect(() => {
+    if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+    retryTimerRef.current = null;
+    setImageAttempt(0);
+    setImageState("loading");
+    return () => {
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+    };
+  }, [screenshot?.path]);
+
+  const screenshotSrc = screenshot
+    ? `${artifactUrl(screenshot.path)}${screenshot.path.includes("?") ? "&" : "?"}btp_retry=${imageAttempt}`
+    : "";
+
+  const handleScreenshotError = () => {
+    if (imageAttempt >= 3) {
+      setImageState("failed");
+      return;
+    }
+    setImageState("retrying");
+    if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+    retryTimerRef.current = setTimeout(() => {
+      setImageAttempt(current => current + 1);
+      setImageState("loading");
+      retryTimerRef.current = null;
+    }, 1_000);
+  };
+
+  if (filtered.length === 0 && !run) {
     return (
       <p style={{ color: "#94a3b8", fontSize: 13 }}>
         No evidence collected yet.
@@ -29,6 +59,17 @@ export function EvidencePanel({ evidence, phase, title, run }: EvidencePanelProp
 
   const isPassed = run?.passed;
   const isInfra = run?.outcome === "INFRASTRUCTURE_ERROR";
+  const recoveredExpected = run?.actual.match(/(?:^|\n)Expected:\s*([^\r\n]+)/)?.[1]?.trim() ?? "";
+  const displayedExpected = run?.expected?.trim() || recoveredExpected;
+  const resultLabel = isInfra
+    ? "INFRASTRUCTURE ERROR"
+    : phase === "before" && run?.outcome === "ASSERTION_FAILED"
+      ? "BUG REPRODUCED"
+      : phase === "before" && isPassed
+        ? "BUG NOT REPRODUCED"
+        : phase === "after" && isPassed
+          ? "REPRODUCTION TEST PASSED"
+          : "ASSERTION FAILED";
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -60,19 +101,15 @@ export function EvidencePanel({ evidence, phase, title, run }: EvidencePanelProp
               whiteSpace: "nowrap",
             }}
           >
-            {isInfra
-              ? "⚠️ INFRASTRUCTURE ERROR"
-              : isPassed
-              ? "✅ PASSED"
-              : "❌ ASSERTION FAILED"}
+            {resultLabel}
           </span>
-          <span style={{ color: "#334155" }}>
-            Expected: <em style={{ color: "#0f172a", fontWeight: 600 }}>{run.expected}</em>
-          </span>
+          {displayedExpected && <span style={{ color: "#334155" }}>
+            Expected: <em style={{ color: "#0f172a", fontWeight: 600 }}>{displayedExpected}</em>
+          </span>}
           {!run.passed && (
             <details className="failure-details" style={{ width: "100%", marginTop: 4 }}>
               <summary style={{ cursor: "pointer", color: "#b91c1c", fontWeight: 600 }}>
-                Actual result · View failure details
+                Observed result · View failure details
               </summary>
               <pre
                 style={{
@@ -111,7 +148,7 @@ export function EvidencePanel({ evidence, phase, title, run }: EvidencePanelProp
       {/* Screenshot */}
       {screenshot && (
         <div className="screenshot-container">
-          {imgError ? (
+          {imageState === "failed" ? (
             <div
               role="img"
               aria-label={screenshot.description}
@@ -129,6 +166,21 @@ export function EvidencePanel({ evidence, phase, title, run }: EvidencePanelProp
               <br />
               <span style={{ fontSize: 11, color: "#94a3b8" }}>{screenshot.description}</span>
             </div>
+          ) : imageState === "retrying" ? (
+            <div
+              role="status"
+              style={{
+                background: "#f8fafc",
+                border: "1px dashed #cbd5e1",
+                borderRadius: 8,
+                padding: "28px 16px",
+                textAlign: "center",
+                color: "#64748b",
+                fontSize: 13,
+              }}
+            >
+              Retrying screenshot evidence…
+            </div>
           ) : (
             <div
               style={{
@@ -141,14 +193,15 @@ export function EvidencePanel({ evidence, phase, title, run }: EvidencePanelProp
               }}
             >
               <img
-                src={artifactUrl(screenshot.path)}
+                src={screenshotSrc}
                 alt={screenshot.description}
                 style={{
                   maxWidth: "100%",
                   borderRadius: 6,
                   display: "block",
                 }}
-                onError={() => setImgError(true)}
+                onLoad={() => setImageState("loaded")}
+                onError={handleScreenshotError}
               />
             </div>
           )}

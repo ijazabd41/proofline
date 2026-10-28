@@ -2,7 +2,7 @@
 
 ## Supported scope
 
-Bug-to-Proof is a local research and portfolio prototype. It is not a hosted service and has no published security-support SLA.
+Proofline (repository identifier: `bug-to-proof`) is a local research and portfolio prototype. It is not a hosted service and has no published security-support SLA.
 
 ## Reporting a vulnerability
 

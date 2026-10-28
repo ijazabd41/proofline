@@ -444,6 +444,11 @@ export function buildRepairGraph(dependencies: Partial<RepairGraphDependencies> 
 
       const attemptRecord: AttemptRecord = {
         attemptNumber: state.attempt,
+        tokenUsage: validatedProposal.generation?.usage ? {
+          promptTokens: validatedProposal.generation.usage.inputTokens,
+          completionTokens: validatedProposal.generation.usage.outputTokens,
+          totalTokens: validatedProposal.generation.usage.totalTokens,
+        } : undefined,
         proposal: validatedProposal,
         state: "AWAITING_REVIEW",
         startedAt: new Date(state.attemptStartAt ?? Date.now()).toISOString(),
@@ -493,6 +498,9 @@ export function buildRepairGraph(dependencies: Partial<RepairGraphDependencies> 
 
       return {
         review,
+        // Human review time must not consume the execution budget used by
+        // post-patch reproduction, regression checks, and any retry.
+        deadlineMs: state.config?.timeoutMs ? Date.now() + state.config.timeoutMs : state.deadlineMs,
         events: [`Review decision received: ${review.decision}`],
       };
     })
@@ -642,6 +650,11 @@ export function buildRepairGraph(dependencies: Partial<RepairGraphDependencies> 
         return { state: "CANCELLED" as const };
       }
 
+      syncDurableRecord({ state: "VERIFYING_REPRODUCTION" }, state.runId, {
+        stage: "verification_started",
+        message: "Running the approved candidate against the frozen reproduction test",
+      });
+
       const tStart = Date.now();
       const verificationArtifactDir = path.join(state.workspace!.runDir, `attempt-${state.attempt}`, "verification");
       const postPatchResult = await deps.run(state.caseId, state.reproductionTestFile, "after", {
@@ -667,12 +680,13 @@ export function buildRepairGraph(dependencies: Partial<RepairGraphDependencies> 
         evidenceIds: [],
       };
 
-      syncDurableRecord({ postPatchRun }, state.runId, {
+      syncDurableRecord({ state: "VERIFYING_REPRODUCTION", postPatchRun }, state.runId, {
         stage: "verification",
         message: `Post-patch reproduction outcome: ${postPatchResult.outcome} (passed: ${postPatchResult.passed})`,
       });
 
       return {
+        state: "VERIFYING_REPRODUCTION" as const,
         postPatchRun,
         tPostPatchMs,
         events: [`Post-patch outcome: ${postPatchResult.outcome}`],
@@ -687,17 +701,23 @@ export function buildRepairGraph(dependencies: Partial<RepairGraphDependencies> 
         return { state: "CANCELLED" as const };
       }
 
+      syncDurableRecord({ state: "RUNNING_CHECKS" }, state.runId, {
+        stage: "regression_started",
+        message: "Running required regression checks for the candidate",
+      });
+
       const tStart = Date.now();
       const checksArtifactDir = path.join(state.workspace!.runDir, `attempt-${state.attempt}`, "checks");
       const requiredChecks = await deps.checks(state.workspace!.minishopDir, checksArtifactDir, {
         runId: state.runId,
+        timeoutMs: state.config?.regressionTimeoutMs,
         abortSignal: activeRes?.abortController.signal,
       });
       const tChecksMs = Date.now() - tStart;
 
       const allChecksPassed = requiredChecks.length > 0 && requiredChecks.every((c) => c.passed);
 
-      syncDurableRecord({ requiredChecks }, state.runId, {
+      syncDurableRecord({ state: "RUNNING_CHECKS", requiredChecks }, state.runId, {
         stage: "regression",
         message: allChecksPassed
           ? `All ${requiredChecks.length} candidate regression checks passed cleanly.`
@@ -705,6 +725,7 @@ export function buildRepairGraph(dependencies: Partial<RepairGraphDependencies> 
       });
 
       return {
+        state: "RUNNING_CHECKS" as const,
         requiredChecks,
         tChecksMs,
         events: [allChecksPassed ? "Regression checks passed" : "Regression checks failed"],
@@ -745,6 +766,33 @@ export function buildRepairGraph(dependencies: Partial<RepairGraphDependencies> 
 
       const attempts = [...state.attempts.filter((a) => a.attemptNumber !== state.attempt), currentAttempt];
       const nextAttempt = state.attempt + 1;
+      const retryPermitted = nextAttempt <= state.maxAttempts && !(state.deadlineMs && Date.now() > state.deadlineMs);
+
+      if (!retryPermitted) {
+        syncDurableRecord(
+          {
+            attempts,
+            diagnostics: newDiagnostics,
+            attempt: state.attempt,
+            state: "VERIFICATION_FAILED",
+            stopReason: failureReason,
+          },
+          state.runId,
+          {
+            stage: "retry",
+            message: `Attempt ${state.attempt} failed: ${failureReason}. Restored pristine workspace; no retry was started because the attempt or execution-time limit was reached.`,
+          }
+        );
+
+        return {
+          attempt: state.attempt,
+          attempts,
+          diagnostics: newDiagnostics,
+          state: "VERIFICATION_FAILED" as const,
+          stopReason: failureReason,
+          events: [`Restored pristine snapshot; retry limit reached after attempt ${state.attempt}`],
+        };
+      }
 
       syncDurableRecord(
         {
@@ -752,6 +800,10 @@ export function buildRepairGraph(dependencies: Partial<RepairGraphDependencies> 
           diagnostics: newDiagnostics,
           attempt: nextAttempt,
           state: "INVESTIGATING",
+          proposal: null,
+          review: null,
+          postPatchRun: null,
+          requiredChecks: [],
         },
         state.runId,
         {
@@ -768,6 +820,7 @@ export function buildRepairGraph(dependencies: Partial<RepairGraphDependencies> 
         proposal: null,
         review: null,
         postPatchRun: null,
+        requiredChecks: [],
         error: undefined,
         events: [`Restored pristine snapshot for attempt ${nextAttempt}`],
       };
@@ -998,8 +1051,7 @@ export function buildRepairGraph(dependencies: Partial<RepairGraphDependencies> 
   // After Attempt Restoration & Retry:
   workflow.addConditionalEdges("recordFailedAttemptAndRestore", (state) => {
     if (state.state === "CANCELLED") return "finalizeRun";
-    const isDeadlineExceeded = state.deadlineMs ? Date.now() > state.deadlineMs : false;
-    if (state.attempt <= state.maxAttempts && !isDeadlineExceeded) {
+    if (state.state === "INVESTIGATING") {
       return "investigateSource";
     }
     return "finalizeRun";

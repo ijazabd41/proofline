@@ -21,8 +21,13 @@ const phase: Record<CaseStatus, number> = {
   VERIFICATION_FAILED: 3,
 };
 
-export function Workflow({ status }: { status?: CaseStatus }) {
-  const currentPhase = status ? (phase[status] ?? 0) : 0;
+export function Workflow({ status, repairState }: { status?: CaseStatus; repairState?: string }) {
+  const repairPhase: Record<string, number> = {
+    INITIALIZING: 1, REPRODUCING_BASELINE: 1, INVESTIGATING: 2, PROPOSING: 2,
+    AWAITING_REVIEW: 2, APPLYING: 3, VERIFYING_REPRODUCTION: 3, RUNNING_CHECKS: 3,
+    VERIFIED: 3, VERIFICATION_FAILED: 3, REJECTED: 2,
+  };
+  const currentPhase = repairState ? (repairPhase[repairState] ?? 1) : status ? (phase[status] ?? 0) : 0;
 
   return (
     <ol className="workflow" aria-label="Repair workflow">

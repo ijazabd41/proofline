@@ -193,15 +193,18 @@ aiRouter.post("/cases/:id/repair-runs", async (req, res, next) => {
     typeof rawBody.maxAttempts === "number" && rawBody.maxAttempts >= 1 && rawBody.maxAttempts <= 5
       ? Math.floor(rawBody.maxAttempts)
       : 3;
+  const generationConfig = ragConfig();
+  const defaultTimeoutMs = generationConfig.generationProvider === "ollama" ? Math.min(900_000, generationConfig.timeoutMs + 180_000) : 300_000;
   const timeoutMs =
-    typeof rawBody.timeoutMs === "number" && rawBody.timeoutMs >= 10_000 && rawBody.timeoutMs <= 300_000
+    typeof rawBody.timeoutMs === "number" && rawBody.timeoutMs >= 10_000 && rawBody.timeoutMs <= 900_000
       ? rawBody.timeoutMs
-      : 120_000;
+      : defaultTimeoutMs;
 
   const sanitizedConfig = {
     mode: "dynamic" as const,
     maxAttempts,
     timeoutMs,
+    regressionTimeoutMs: generationConfig.generationProvider === "ollama" ? 120_000 : 90_000,
   };
 
   try {

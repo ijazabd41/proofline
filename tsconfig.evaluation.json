@@ -11,6 +11,10 @@
     "noUnusedParameters": false
   },
   "files": [
+    "scripts/compare-models.ts",
+    "scripts/model-comparison-core.ts",
+    "scripts/model-comparison-core.test.ts",
+    "data/evals/model-comparison-fixtures.ts",
     "data/evals/prospective-v2-fixtures.ts",
     "data/evals/prospective-v3-fixtures.ts",
     "data/evals/prospective-v4-fixtures.ts",

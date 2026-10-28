@@ -1,4 +1,5 @@
 export type ProposalFailureBoundary =
+  | "invalid_proposal"
   | "authentication_failed"
   | "request_rejected"
   | "model_or_endpoint_not_found"
@@ -13,6 +14,11 @@ export function classifyProposalFailure(error: unknown): {
   diagnostic: string;
 } {
   const message = (error instanceof Error ? error.message : String(error)).toLowerCase();
+  if (/model proposed invalid edits|proposal missing|proposal must contain|edit missing|invalid edit entry|failed to parse model proposal|did not contain a valid json/.test(message)) return {
+    boundary: "invalid_proposal",
+    stopReason: "Model response failed patch validation; no valid proposal was created.",
+    diagnostic: "Generated patch content did not satisfy the proposal or source-edit contract.",
+  };
   if (/\b401\b|unauthori[sz]ed|invalid api key|authentication/.test(message)) return {
     boundary: "authentication_failed",
     stopReason: "Patch generation provider rejected authentication; verify the configured API key and provider account.",
