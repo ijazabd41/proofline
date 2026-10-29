@@ -11,7 +11,7 @@ import {
 import { computeProposalHash } from "./contracts";
 import { writeCase, deleteCase } from "../../storage/caseStore";
 import type { BugCase } from "@bug-to-proof/shared-types";
-import { ARTIFACTS_DIR } from "../../utils/paths";
+import { ARTIFACTS_DIR, DATA_DIR } from "../../utils/paths";
 import type { RunResult } from "../../runner/playwrightRunner";
 import { trustedGeneratedPlaywrightConfig } from "../../runner/playwrightRunner";
 import type { RequiredCheckResult } from "./contracts";
@@ -133,7 +133,7 @@ describe("Dynamic AI Repair Service Lifecycle", () => {
     const testFile = path.join(acceptedTestDir, "reproduction.spec.ts");
     fs.writeFileSync(testFile, 'import { test, expect } from "@playwright/test"; test("accepted dynamic reproduction", async () => expect(1).toBe(2));');
     trustedGeneratedPlaywrightConfig(acceptedTestDir);
-    const bugCase = JSON.parse(fs.readFileSync(path.join(process.cwd(), "data", "cases", `${testCaseId}.json`), "utf8")) as BugCase;
+    const bugCase = JSON.parse(fs.readFileSync(path.join(DATA_DIR, `${testCaseId}.json`), "utf8")) as BugCase;
     bugCase.reproduction = { ...bugCase.reproduction!, testFile, testRoot: path.join(ARTIFACTS_DIR, "reproduction-runs", "accepted"),
       generatedTest: { reproductionRunId: "generated-run", definitionHash: "a".repeat(64), compiledTestHash: "b".repeat(64),
         sourceFingerprint: "c".repeat(64), acceptedAt: "2026-10-14T00:00:00.000Z", acceptedBy: "reviewer" } };
@@ -153,7 +153,7 @@ describe("Dynamic AI Repair Service Lifecycle", () => {
     trustedGeneratedPlaywrightConfig(acceptedTestDir);
     const acceptedRoot = path.join(ARTIFACTS_DIR, "reproduction-runs", "accepted");
     const fingerprint = (await import("../../runner/playwrightRunner")).generatedTestFingerprint(testFile);
-    const bugCase = JSON.parse(fs.readFileSync(path.join(process.cwd(), "data", "cases", `${testCaseId}.json`), "utf8")) as BugCase;
+    const bugCase = JSON.parse(fs.readFileSync(path.join(DATA_DIR, `${testCaseId}.json`), "utf8")) as BugCase;
     bugCase.reproduction = { ...bugCase.reproduction!, testFile, testRoot: acceptedRoot,
       generatedTest: { reproductionRunId: "generated-cycle", definitionHash: "a".repeat(64), compiledTestHash: "b".repeat(64),
         sourceFingerprint: "c".repeat(64), acceptedAt: "2026-10-14T00:00:00.000Z", acceptedBy: "reviewer" } };

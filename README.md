@@ -2,11 +2,11 @@
 
 > Turn a structured bug report into a constrained browser reproduction, a reviewed repair, and evidence that can be independently checked.
 
-**Proofline** is the product and dashboard name. The repository and internal npm package identifiers retain the original `bug-to-proof` name.
+**Proofline** is the product and dashboard name. Internal npm package identifiers retain the original `bug-to-proof` name for compatibility.
 
 [Watch the captioned product demo](docs/evidence/portfolio/proofline-product-demo.mp4) · [Architecture](docs/architecture.md) · [Setup](#quick-start) · [Evaluation and limitations](#verified-results)
 
-**Release review:** the [28 October portfolio preflight](docs/portfolio-preflight.md) records the latest checks and outstanding test failures. Earlier passing results below describe their recorded evaluation snapshots.
+**Release verification:** the [portfolio preflight](docs/portfolio-preflight.md) records current local checks, repairs, and verification boundaries. Evaluation scores below describe their original recorded snapshots.
 
 Start with the [recorded reference walkthrough](demo_recording.md) and [shareable evidence example](docs/evidence/portfolio-reference.md). The walkthrough uses a deterministic repair proposal and real browser verification.
 
@@ -75,8 +75,8 @@ The API owns lifecycle persistence, discovery, candidate validation, repair orch
 Requirements: Node.js 22.19+, npm 9+, and Chromium for browser verification.
 
 ```bash
-git clone https://github.com/ijazabd41/bug-to-proof.git
-cd bug-to-proof
+git clone https://github.com/ijazabd41/proofline.git
+cd proofline
 npm install
 npx playwright install chromium
 cp .env.example .env

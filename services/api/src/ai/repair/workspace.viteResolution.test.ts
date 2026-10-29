@@ -18,7 +18,7 @@ describe("isolated MiniShop server", () => {
       releaseWorkspaceLock(workspace);
       const runsRoot = path.join(ARTIFACTS_DIR, "runs") + path.sep;
       if (path.resolve(workspace.runDir).startsWith(path.resolve(runsRoot) + path.sep)) {
-        fs.rmSync(workspace.runDir, { recursive: true, force: true, maxRetries: 3 });
+        await fs.promises.rm(workspace.runDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
       }
     }
   }, 45_000);

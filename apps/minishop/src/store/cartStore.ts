@@ -61,5 +61,5 @@ export const useCartStore = create<CartStore>((set, get) => ({
 
   shipping: () => (get().total() >= 50 || get().items.length === 0 ? 0 : 5),
 
-  total: () => get().items[0]?.price ?? 0,
+  total: () => get().items.reduce((sum, item) => sum + item.price * item.quantity, 0),
 }));

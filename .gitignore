@@ -27,6 +27,8 @@ data/cases/case-[0-9][0-9][0-9][0-9]*.json
 # Retained development smoke records created before numeric runtime IDs.
 data/cases/case-b1375c822f61f02391.json
 data/cases/case-fd42401606ba7d703c.json
+# Disposable cases created by deletion-guard tests; not curated seeds.
+data/cases/case-guard-del-*.json
 
 # Keep source-controlled placeholders outside the runtime artifact tree
 !data/cases/.gitkeep

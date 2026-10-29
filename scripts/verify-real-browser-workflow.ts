@@ -55,6 +55,9 @@ async function runRealBrowserWorkflow() {
     {
       mode: "dynamic",
       maxAttempts: 1,
+      // Match the dashboard's non-Ollama regression budget, including cold
+      // jsdom startup in the copied workspace on Windows.
+      regressionTimeoutMs: 90_000,
       seedDefects: [
         {
           relativePath: "src/store/cartStore.ts",

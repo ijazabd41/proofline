@@ -71,7 +71,7 @@ describe("generated spec evidence-runner boundary", () => {
     } finally { await new Promise<void>(resolve => server.close(() => resolve())); }
   }, 45_000);
 
-  it("records a disappeared discovered target as structured assertion evidence", async () => {
+  it("retains disappeared-target evidence without claiming a reproduced bug", async () => {
     const integrationRoot = path.resolve("artifacts/arbitrary-reproduction/ar4-generation-execution/integration-temp"); fs.mkdirSync(integrationRoot, { recursive: true });
     const root = fs.mkdtempSync(path.join(integrationRoot, "btp-target-missing-")); dirs.push(root);
     const server = http.createServer((_req, res) => { res.writeHead(200, { "content-type": "text/html" }); res.end(`<!doctype html><button data-testid="remove-from-cart-1" onclick="document.querySelector('[data-testid=cart-item-quantity-1]').remove()">Remove</button><span data-testid="cart-item-quantity-1">×2</span>`); });
@@ -86,7 +86,9 @@ describe("generated spec evidence-runner boundary", () => {
         runId: "missing-target", targetUrl: `http://127.0.0.1:${address.port}`, timeoutMs: 30_000 });
       if (result.failureKind === "BROWSER_UNAVAILABLE") expect(result.outcome).toBe("INFRASTRUCTURE_ERROR");
       else {
-        expect(result.outcome).toBe("ASSERTION_FAILED");
+        expect(result.outcome).toBe("INFRASTRUCTURE_ERROR");
+        expect(result.failureKind).toBe("SELECTOR_OR_ACTION_ERROR");
+        expect(result.passed).toBe(false);
         expect(result.actual).toContain("<missing>");
       }
       expect(fs.existsSync(path.join(artifactDir, "manifest.json"))).toBe(true);

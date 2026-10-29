@@ -1,4 +1,4 @@
-# Bug-to-Proof architecture
+# Proofline architecture
 
 These diagrams describe the verified architecture for the configured local MiniShop target. They distinguish trusted code, untrusted inputs, human approval, isolated execution, and retained proof.
 
